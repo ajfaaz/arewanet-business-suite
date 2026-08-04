@@ -1,0 +1,201 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+
+{% url 'product_list' as list_url %}
+{% include "components/breadcrumbs.html" with parent_url=list_url parent_title="Products & Services" current_title=product.name %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #0F3F62;">{{ product.name }}</h2>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary">{{ product.category|default:"Uncategorized" }}</span>
+            <span class="badge bg-info text-dark">{{ product.get_product_type_display }}</span>
+            {% if product.active %}
+            <span class="badge bg-success">Active</span>
+            {% else %}
+            <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+            {% if product.sku %}<small class="text-muted ms-2">SKU: <code>{{ product.sku }}</code></small>{% endif %}
+            {% if product.barcode %}<small class="text-muted ms-2">Barcode: <code>{{ product.barcode }}</code></small>{% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{% url 'product_update' product.id %}" class="btn btn-warning fw-semibold">
+            <i class="fas fa-edit me-1"></i> Edit
+        </a>
+        <button type="button" class="btn btn-outline-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="fas fa-trash me-1"></i> Delete
+        </button>
+        <a href="{% url 'product_list' %}" class="btn btn-secondary fw-semibold">
+            Back to Products
+        </a>
+    </div>
+</div>
+
+{% include "components/delete_modal.html" with item_type="Product" item_name=product.name delete_url=product.id|stringformat:"s"|add:"/delete/" %}
+
+<!-- ERP Financial Metrics Dashboard -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small d-block mb-1 text-uppercase fw-semibold">Selling Price</span>
+                <h3 class="fw-bold text-success mb-0">₦{{ product.selling_price }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small d-block mb-1 text-uppercase fw-semibold">Cost Price</span>
+                <h3 class="fw-bold text-secondary mb-0">₦{{ product.cost_price }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small d-block mb-1 text-uppercase fw-semibold">Minimum Price</span>
+                <h3 class="fw-bold text-warning mb-0">₦{{ product.minimum_price }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small d-block mb-1 text-uppercase fw-semibold">Profit Margin</span>
+                <h3 class="fw-bold text-primary mb-0">₦{{ profit }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-3 mb-md-0">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small d-block text-uppercase fw-semibold">Total Invoices</span>
+                    <h2 class="fw-bold mb-0 mt-1">{{ invoices_count }}</h2>
+                </div>
+                <div class="rounded-circle bg-light p-3 text-primary">
+                    <i class="fas fa-file-invoice fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small d-block text-uppercase fw-semibold">Generated Revenue</span>
+                    <h2 class="fw-bold text-success mb-0 mt-1">₦{{ revenue }}</h2>
+                </div>
+                <div class="rounded-circle bg-light p-3 text-success">
+                    <i class="fas fa-coins fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Specification & Recent Invoices -->
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="fas fa-receipt me-2 text-primary"></i>Recent Invoices</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice No</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in recent_invoices %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'invoice_detail' inv.id %}" class="fw-bold text-decoration-none">
+                                    {{ inv.invoice_no }}
+                                </a>
+                            </td>
+                            <td>{{ inv.customer.company_name }}</td>
+                            <td>{{ inv.invoice_date|date:"M d, Y" }}</td>
+                            <td>₦{{ inv.total_due }}</td>
+                            <td>
+                                {% if inv.status == 'PAID' %}
+                                <span class="badge bg-success">Paid</span>
+                                {% elif inv.status == 'UNPAID' %}
+                                <span class="badge bg-warning text-dark">Unpaid</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ inv.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="fas fa-file-invoice fa-2x mb-2 d-block text-secondary"></i>
+                                No invoices created with this item yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0"><i class="fas fa-info-circle me-2 text-info"></i>Product Specification</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Unit of Measure</span>
+                    <strong>{{ product.unit }}</strong>
+                </div>
+
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Tax Attribute</span>
+                    {% if product.taxable %}
+                    <span class="badge bg-info text-dark">Taxable (VAT Applicable)</span>
+                    {% else %}
+                    <span class="badge bg-light text-dark">Tax Exempt</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Description</span>
+                    <p class="text-muted small mb-0">{{ product.description|linebreaks|default:"No description provided." }}</p>
+                </div>
+
+                {% if product.notes %}
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Notes</span>
+                    <p class="text-muted small mb-0">{{ product.notes|linebreaks }}</p>
+                </div>
+                {% endif %}
+
+                {% if product.image %}
+                <div class="mt-4 border-top pt-3 text-center">
+                    <span class="text-muted small d-block mb-2">Product Image</span>
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded border shadow-sm" style="max-height: 180px;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

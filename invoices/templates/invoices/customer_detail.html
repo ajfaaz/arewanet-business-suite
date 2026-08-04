@@ -1,0 +1,140 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #0F3F62;">{{ customer.company_name }}</h2>
+        <p class="text-muted small mb-0">Customer Profile & Account Financial Overview</p>
+    </div>
+
+    <div>
+        <a href="{% url 'customer_update' customer.id %}" class="btn btn-warning me-2">
+            Edit Customer
+        </a>
+        <a href="{% url 'customer_history' customer.id %}" class="btn btn-info text-white me-2">
+            Billing History
+        </a>
+        <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary">
+            Back to Customers
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Left: Customer Information Card -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="fw-bold mb-0 text-dark">Customer Contact Information</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <span class="text-muted small d-block">Company Name</span>
+                        <strong class="fs-6 text-dark">{{ customer.company_name }}</strong>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <span class="text-muted small d-block">Contact Person</span>
+                        <strong class="fs-6 text-dark">{{ customer.contact_person|default:"-" }}</strong>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <span class="text-muted small d-block">Email Address</span>
+                        <a href="mailto:{{ customer.email }}" class="text-primary text-decoration-none fw-semibold">{{ customer.email }}</a>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <span class="text-muted small d-block">Phone Number</span>
+                        <strong class="fs-6 text-dark">{{ customer.phone }}</strong>
+                    </div>
+
+                    <div class="col-12">
+                        <span class="text-muted small d-block">Billing Address</span>
+                        <p class="mb-0 text-dark small" style="white-space: pre-line;">{{ customer.address }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Financial Stats Summary -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="fw-bold mb-0 text-dark">Financial Summary</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <span class="text-uppercase small fw-bold text-muted d-block mb-1">Total Invoices</span>
+                    <h2 class="fw-bold mb-0 text-dark">{{ total_invoices }}</h2>
+                </div>
+
+                <div class="mb-4">
+                    <span class="text-uppercase small fw-bold text-success d-block mb-1">Total Paid Revenue</span>
+                    <h3 class="fw-bold mb-0 text-success">{{ total_revenue|naira }}</h3>
+                </div>
+
+                <div>
+                    <span class="text-uppercase small fw-bold text-danger d-block mb-1">Outstanding Balance</span>
+                    <h3 class="fw-bold mb-0 text-danger">{{ outstanding|naira }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Invoices Table -->
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">Recent Invoices</h5>
+        <a href="{% url 'customer_history' customer.id %}" class="small text-primary text-decoration-none fw-bold">View All</a>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 ps-4">Invoice No</th>
+                        <th class="py-3">Date</th>
+                        <th class="py-3">Project</th>
+                        <th class="py-3 text-end">Total Due</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th class="py-3 text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-dark">{{ invoice.invoice_no }}</td>
+                        <td>{{ invoice.invoice_date|date:"M d, Y" }}</td>
+                        <td>{{ invoice.project_name|default:"-" }}</td>
+                        <td class="text-end fw-semibold">{{ invoice.total_due|naira }}</td>
+                        <td class="text-center">
+                            {% if invoice.status == 'PAID' or invoice.status == 'Paid' %}
+                            <span class="badge bg-success px-3 py-2 rounded-pill">Paid</span>
+                            {% elif invoice.status == 'UNPAID' or invoice.status == 'Unpaid' %}
+                            <span class="badge bg-danger px-3 py-2 rounded-pill">Unpaid</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">{{ invoice.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted small">No invoices recorded for this customer.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

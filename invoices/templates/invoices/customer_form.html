@@ -1,0 +1,37 @@
+{% extends 'invoices/base.html' %}
+
+{% block content %}
+
+<div class="card shadow">
+
+    <div class="card-header">
+        <h3>Add Customer</h3>
+    </div>
+
+    <div class="card-body">
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button type="submit" class="btn btn-success">
+
+                Save Customer
+
+            </button>
+
+            <a href="{% url 'customer_list' %}" class="btn btn-secondary">
+
+                Cancel
+
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

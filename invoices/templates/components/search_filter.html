@@ -1,0 +1,36 @@
+<form method="GET">
+
+    <div class="card shadow-sm mb-4 border-0">
+
+        <div class="card-body">
+
+            <div class="row g-2">
+
+                <div class="col-md-10">
+
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ request.GET.q|default:'' }}"
+                        class="form-control"
+                        placeholder="{{ placeholder|default:'Search...' }}">
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <button class="btn btn-primary w-100">
+
+                        Search
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</form>

@@ -1,0 +1,27 @@
+<div class="d-grid gap-2">
+
+<a href="{{ save_url|default:'#' }}" class="btn btn-success">
+    <i class="fas fa-save me-1"></i> Save
+</a>
+
+<a href="{{ preview_url|default:'#' }}" class="btn btn-primary">
+    <i class="fas fa-eye me-1"></i> Preview
+</a>
+
+<a href="{{ print_url|default:'#' }}" class="btn btn-dark" target="_blank">
+    <i class="fas fa-print me-1"></i> Print
+</a>
+
+<a href="{{ pdf_url|default:'#' }}" class="btn btn-outline-primary">
+    <i class="fas fa-file-pdf me-1"></i> Download PDF
+</a>
+
+<a href="{{ email_url|default:'#' }}" class="btn btn-outline-success">
+    <i class="fas fa-envelope me-1"></i> Email
+</a>
+
+<a href="{{ duplicate_url|default:'#' }}" class="btn btn-outline-secondary">
+    <i class="fas fa-copy me-1"></i> Duplicate
+</a>
+
+</div>

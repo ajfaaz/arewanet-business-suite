@@ -1,0 +1,917 @@
+import io
+from datetime import date, datetime
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Sum, Q
+from django.core.mail import EmailMessage
+from django.contrib import messages
+
+from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product
+from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm
+from .utils.pdf_generator import generate_invoice_pdf
+
+
+def _get_user_organization(user):
+    if hasattr(user, 'userprofile') and user.userprofile.organization:
+        return user.userprofile.organization
+    org = Organization.objects.first()
+    if not org:
+        org = Organization.objects.create(name='ArewaNet Ventures', slug='arewanet-ventures')
+    return org
+
+
+get_user_organization = _get_user_organization
+
+
+def _check_permission(user, allowed_roles):
+    if not hasattr(user, 'userprofile'):
+        if user.is_superuser:
+            return
+        raise PermissionDenied
+    if user.userprofile.role not in allowed_roles:
+        raise PermissionDenied
+
+
+@login_required
+def dashboard(request):
+    org = _get_user_organization(request.user)
+    invoices = Invoice.objects.filter(organization=org)
+    customers = Customer.objects.filter(organization=org)
+    payments = Payment.objects.filter(organization=org)
+
+    # Financial KPIs
+    paid_inv_total = invoices.filter(status='PAID').aggregate(total=Sum('total_due'))['total'] or 0
+    pay_total = payments.aggregate(total=Sum('amount'))['total'] or 0
+    total_revenue = max(paid_inv_total, pay_total)
+
+    # Calculate total outstanding balance
+    unpaid_or_partial_invoices = invoices.exclude(status='PAID').exclude(status='CANCELLED')
+    outstanding = sum(inv.balance for inv in unpaid_or_partial_invoices)
+
+    payments_today = payments.filter(
+        payment_date=date.today()
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    total_invoices_count = invoices.count()
+
+    context = {
+        'total_revenue': total_revenue,
+        'outstanding': outstanding,
+        'payments_today': payments_today,
+        'total_invoices': total_invoices_count,
+        'customer_count': customers.count(),
+        'paid_count': invoices.filter(status='PAID').count(),
+        'unpaid_count': invoices.filter(status='UNPAID').count(),
+        'paid': invoices.filter(status='PAID').count(),
+        'unpaid': invoices.filter(status='UNPAID').count(),
+        'revenue': total_revenue,
+    }
+
+    return render(
+        request,
+        'invoices/dashboard.html',
+        context
+    )
+
+
+@login_required
+def invoice_list(request):
+    org = _get_user_organization(request.user)
+    status_filter = request.GET.get('status', 'all').lower()
+
+    invoices = Invoice.objects.filter(organization=org).order_by('-id')
+
+    if status_filter in ['paid', 'unpaid', 'overdue', 'draft']:
+        invoices = invoices.filter(status__iexact=status_filter)
+
+    return render(
+        request,
+        'invoices/invoice_list.html',
+        {
+            'invoices': invoices,
+            'current_status': status_filter
+        }
+    )
+
+
+@login_required
+def invoice_detail(request, pk):
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(
+        Invoice.objects.select_related('customer', 'organization').prefetch_related('items'),
+        pk=pk,
+        organization=org
+    )
+
+    items = invoice.items.all()
+    organization = _get_organization(invoice)
+
+    return render(
+        request,
+        'invoices/invoice_detail.html',
+        {
+            'invoice': invoice,
+            'items': items,
+            'organization': organization
+        }
+    )
+
+
+@login_required
+def invoice_duplicate(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    orig_invoice = get_object_or_404(Invoice, pk=pk, organization=org)
+
+    new_invoice = Invoice.objects.create(
+        organization=org,
+        customer=orig_invoice.customer,
+        invoice_date=date.today(),
+        due_date=orig_invoice.due_date,
+        project_name=orig_invoice.project_name,
+        deployment_phase=orig_invoice.deployment_phase,
+        subtotal=orig_invoice.subtotal,
+        vat=orig_invoice.vat,
+        total_due=orig_invoice.total_due,
+        status='DRAFT'
+    )
+
+    for item in orig_invoice.items.all():
+        InvoiceItem.objects.create(
+            invoice=new_invoice,
+            description=item.description,
+            unit=item.unit,
+            qty=item.qty,
+            unit_price=item.unit_price,
+            total=item.total
+        )
+
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"Invoice {orig_invoice.invoice_no} Duplicated to {new_invoice.invoice_no}"
+    )
+
+    return redirect('invoice_detail', new_invoice.id)
+
+
+@login_required
+def invoice_mark_paid(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, pk=pk, organization=org)
+
+    invoice.status = 'PAID'
+    invoice.save()
+
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"Invoice {invoice.invoice_no} Marked as Paid"
+    )
+
+    return redirect('invoice_detail', invoice.id)
+
+
+@login_required
+def invoice_delete(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN'])
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        inv_no = invoice.invoice_no
+        invoice.delete()
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f"Invoice {inv_no} Deleted"
+        )
+        return redirect('invoice_list')
+
+    return render(
+        request,
+        'invoices/invoice_delete.html',
+        {'invoice': invoice}
+    )
+
+
+@login_required
+def payment_list(request):
+    org = _get_user_organization(request.user)
+    payments = Payment.objects.filter(organization=org).select_related(
+        "invoice",
+        "invoice__customer",
+        "organization",
+        "receipt",
+    ).order_by("-payment_date", "-id")
+
+    return render(
+        request,
+        "payments/payment_list.html",
+        {
+            "payments": payments
+        },
+    )
+
+
+@login_required
+def payment_create(request, invoice_id):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, pk=invoice_id, organization=org)
+
+    form = PaymentForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.invoice = invoice
+            payment.organization = org
+            payment.received_by = request.user
+            payment.save()
+
+            messages.success(request, "Payment recorded successfully.")
+
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Payment {payment.reference} (₦{payment.amount}) recorded for Invoice {invoice.invoice_no}"
+            )
+
+            return redirect("payment_detail", payment.pk)
+
+    else:
+        ref_code = f"TRX{datetime.now().strftime('%m%d%H%M%S')}"
+        form = PaymentForm(initial={
+            'amount': invoice.balance if invoice.balance > 0 else 0,
+            'payment_date': date.today(),
+            'reference': ref_code
+        })
+
+    return render(
+        request,
+        "payments/payment_form.html",
+        {
+            "form": form,
+            "invoice": invoice,
+        },
+    )
+
+
+@login_required
+def payment_detail(request, pk):
+    org = _get_user_organization(request.user)
+    payment = get_object_or_404(
+        Payment.objects.select_related(
+            "invoice",
+            "invoice__customer",
+            "receipt",
+            "organization",
+        ),
+        pk=pk,
+        organization=org
+    )
+
+    return render(
+        request,
+        "payments/payment_detail.html",
+        {
+            "payment": payment,
+            "invoice": payment.invoice,
+            "organization": payment.organization or org
+        },
+    )
+
+
+@login_required
+def payment_update(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    payment = get_object_or_404(Payment, pk=pk, organization=org)
+
+    form = PaymentForm(request.POST or None, instance=payment)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            payment.invoice.update_status()
+            messages.success(request, "Payment updated successfully.")
+            return redirect("payment_detail", payment.pk)
+
+    return render(
+        request,
+        "payments/payment_form.html",
+        {
+            "form": form,
+            "payment": payment,
+            "invoice": payment.invoice,
+            "is_edit": True,
+        },
+    )
+
+
+@login_required
+def payment_delete(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN'])
+    org = _get_user_organization(request.user)
+    payment = get_object_or_404(Payment, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        invoice = payment.invoice
+        ref = payment.reference
+        payment.delete()
+        invoice.update_status()
+        messages.success(request, "Payment deleted successfully.")
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f"Payment {ref} deleted"
+        )
+        return redirect("payment_list")
+
+    return render(
+        request,
+        "payments/payment_confirm_delete.html",
+        {
+            "payment": payment,
+            "invoice": payment.invoice,
+        },
+    )
+
+
+@login_required
+def receipt_detail(request, pk):
+    org = _get_user_organization(request.user)
+    receipt = get_object_or_404(
+        Receipt.objects.select_related(
+            "payment",
+            "payment__invoice",
+            "payment__invoice__customer",
+            "organization",
+        ),
+        pk=pk,
+        organization=org
+    )
+    return render(
+        request,
+        "payments/payment_detail.html",
+        {
+            "receipt": receipt,
+            "payment": receipt.payment,
+            "invoice": receipt.payment.invoice,
+            "organization": receipt.organization or org
+        },
+    )
+
+
+@login_required
+def receipt_print(request, pk):
+    org = _get_user_organization(request.user)
+    receipt = get_object_or_404(
+        Receipt.objects.select_related(
+            "payment",
+            "payment__invoice",
+            "organization",
+        ),
+        pk=pk,
+        organization=org
+    )
+
+    return render(
+        request,
+        "payments/receipt_print.html",
+        {
+            "receipt": receipt,
+            "payment": receipt.payment,
+            "invoice": receipt.payment.invoice,
+            "organization": receipt.organization or org
+        },
+    )
+
+
+@login_required
+def invoice_create(request):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, organization=org)
+        formset = InvoiceItemFormSet(request.POST, prefix='items', form_kwargs={'organization': org})
+
+        if form.is_valid() and formset.is_valid():
+            invoice = form.save(commit=False)
+            invoice.organization = org
+            invoice.save()
+
+            formset.instance = invoice
+            formset.save()
+
+            from decimal import Decimal
+            subtotal = sum(
+                item.total
+                for item in invoice.items.all()
+            ) or Decimal('0')
+
+            vat_rate = Decimal(str(invoice.vat or 0))
+            vat_amount = (subtotal * vat_rate) / Decimal('100')
+
+            invoice.subtotal = subtotal
+            invoice.total_due = subtotal + vat_amount
+            invoice.save()
+
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Invoice {invoice.invoice_no} Created"
+            )
+
+            return redirect('invoice_detail', invoice.id)
+
+    else:
+        form = InvoiceForm(organization=org)
+        formset = InvoiceItemFormSet(prefix='items', form_kwargs={'organization': org})
+
+    return render(
+        request,
+        'invoices/invoice_create.html',
+        {
+            'form': form,
+            'formset': formset
+        }
+    )
+
+
+@login_required
+def product_info(request, pk):
+    organization = _get_user_organization(request.user)
+    product = get_object_or_404(
+        Product,
+        pk=pk,
+        organization=organization
+    )
+    return JsonResponse({
+        "name": product.name,
+        "description": product.description or product.name,
+        "price": float(product.selling_price),
+        "unit": product.unit,
+    })
+
+
+def _get_organization(invoice):
+    return invoice.organization or Organization.objects.first()
+
+
+@login_required
+def invoice_print(request, pk):
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, id=pk, organization=org)
+    organization = _get_organization(invoice)
+
+    return render(
+        request,
+        'invoices/invoice_print.html',
+        {
+            'invoice': invoice,
+            'organization': organization,
+            'company': organization
+        }
+    )
+
+
+@login_required
+def invoice_pdf(request, pk):
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, id=pk, organization=org)
+    organization = _get_organization(invoice)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{invoice.invoice_no}.pdf"'
+
+    generate_invoice_pdf(response, invoice, organization)
+
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"PDF Downloaded for Invoice {invoice.invoice_no}"
+    )
+
+    return response
+
+
+@login_required
+def invoice_send(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, id=pk, organization=org)
+    organization = _get_organization(invoice)
+
+    buffer = io.BytesIO()
+    generate_invoice_pdf(buffer, invoice, organization)
+    pdf_content = buffer.getvalue()
+    buffer.close()
+
+    email = EmailMessage(
+        subject=f"Invoice {invoice.invoice_no}",
+        body=f"Dear {invoice.customer.company_name},\n\nPlease find attached invoice {invoice.invoice_no}.\n\nThank you for your business!",
+        to=[invoice.customer.email]
+    )
+
+    email.attach(
+        f"{invoice.invoice_no}.pdf",
+        pdf_content,
+        'application/pdf'
+    )
+
+    email.send()
+
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"Invoice {invoice.invoice_no} Emailed"
+    )
+
+    return redirect('invoice_detail', pk=invoice.id)
+
+
+@login_required
+def quotation_convert(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, id=pk)
+
+    invoice = Invoice.objects.create(
+        organization=org,
+        customer=quotation.customer,
+        total_due=quotation.total,
+        invoice_date=datetime.now().date(),
+        due_date=datetime.now().date(),
+        project_name="Converted from Quotation",
+        deployment_phase="Phase 1"
+    )
+
+    quotation.status = 'INVOICED'
+    quotation.save()
+
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"Quotation {quotation.quote_no} Converted to Invoice {invoice.invoice_no}"
+    )
+
+    return redirect('invoice_detail', pk=invoice.id)
+
+
+@login_required
+def customer_list(request):
+    org = _get_user_organization(request.user)
+    query = request.GET.get('q')
+
+    customers = Customer.objects.filter(organization=org)
+
+    if query:
+        customers = customers.filter(company_name__icontains=query)
+
+    return render(
+        request,
+        'invoices/customer_list.html',
+        {
+            'customers': customers,
+            'query': query
+        }
+    )
+
+
+@login_required
+def customer_create(request):
+    org = _get_user_organization(request.user)
+
+    form = CustomerForm(request.POST or None)
+
+    if form.is_valid():
+        customer = form.save(commit=False)
+        customer.organization = org
+        customer.save()
+
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f"Customer {customer.company_name} Created"
+        )
+
+        return redirect('customer_list')
+
+    return render(
+        request,
+        'invoices/customer_form.html',
+        {
+            'form': form
+        }
+    )
+
+
+@login_required
+def customer_update(request, pk):
+    org = _get_user_organization(request.user)
+    customer = get_object_or_404(Customer, pk=pk, organization=org)
+
+    form = CustomerForm(request.POST or None, instance=customer)
+
+    if form.is_valid():
+        form.save()
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f"Customer {customer.company_name} Updated"
+        )
+        return redirect('customer_list')
+
+    return render(
+        request,
+        'invoices/customer_form.html',
+        {
+            'form': form,
+            'customer': customer
+        }
+    )
+
+
+@login_required
+def customer_delete(request, pk):
+    org = _get_user_organization(request.user)
+    customer = get_object_or_404(Customer, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        company_name = customer.company_name
+        customer.delete()
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f"Customer {company_name} Deleted"
+        )
+        return redirect('customer_list')
+
+    return render(
+        request,
+        'invoices/customer_delete.html',
+        {
+            'customer': customer
+        }
+    )
+
+
+@login_required
+def customer_history(request, pk):
+    org = _get_user_organization(request.user)
+    customer = get_object_or_404(Customer, pk=pk, organization=org)
+
+    invoices = Invoice.objects.filter(
+        customer=customer,
+        organization=org
+    ).order_by('-invoice_date')
+
+    return render(
+        request,
+        'invoices/customer_history.html',
+        {
+            'customer': customer,
+            'invoices': invoices
+        }
+    )
+
+
+@login_required
+def customer_detail(request, pk):
+    org = _get_user_organization(request.user)
+    customer = get_object_or_404(Customer, pk=pk, organization=org)
+
+    invoices = Invoice.objects.filter(customer=customer, organization=org)
+
+    total_revenue = invoices.filter(
+        status='PAID'
+    ).aggregate(total=Sum('total_due'))['total'] or 0
+
+    outstanding = invoices.filter(
+        status='UNPAID'
+    ).aggregate(total=Sum('total_due'))['total'] or 0
+
+    context = {
+        'customer': customer,
+        'invoices': invoices.order_by('-id')[:10],
+        'total_invoices': invoices.count(),
+        'paid_invoices': invoices.filter(status='PAID').count(),
+        'outstanding_invoices': invoices.filter(status='UNPAID').count(),
+        'total_revenue': total_revenue,
+        'outstanding': outstanding,
+    }
+
+    return render(
+        request,
+        'invoices/customer_detail.html',
+        context
+    )
+
+
+# ==========================================
+# PRODUCT CATEGORIES VIEWS
+# ==========================================
+
+@login_required
+def category_list(request):
+    org = _get_user_organization(request.user)
+    categories = ProductCategory.objects.filter(organization=org)
+    return render(
+        request,
+        "products/category_list.html",
+        {"categories": categories}
+    )
+
+
+@login_required
+def category_create(request):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    form = ProductCategoryForm(request.POST or None, organization=org)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            category = form.save()
+            messages.success(request, f"Category '{category.name}' created successfully.")
+            return redirect("category_list")
+
+    return render(
+        request,
+        "products/category_form.html",
+        {"form": form}
+    )
+
+
+@login_required
+def category_update(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    category = get_object_or_404(ProductCategory, pk=pk, organization=org)
+    form = ProductCategoryForm(request.POST or None, instance=category, organization=org)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Category '{category.name}' updated successfully.")
+            return redirect("category_list")
+
+    return render(
+        request,
+        "products/category_form.html",
+        {"form": form, "category": category, "is_edit": True}
+    )
+
+
+@login_required
+def category_delete(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN'])
+    org = _get_user_organization(request.user)
+    category = get_object_or_404(ProductCategory, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        name = category.name
+        category.delete()
+        messages.success(request, f"Category '{name}' deleted successfully.")
+        return redirect("category_list")
+
+    return render(
+        request,
+        "products/product_confirm_delete.html",
+        {"object": category, "type": "Category"}
+    )
+
+
+# ==========================================
+# PRODUCTS & SERVICES VIEWS
+# ==========================================
+
+@login_required
+def product_list(request):
+
+    organization = get_user_organization(request.user)
+
+    products = Product.objects.filter(
+        organization=organization
+    )
+
+    q = request.GET.get("q")
+
+    if q:
+
+        products = products.filter(
+
+            Q(name__icontains=q) |
+
+            Q(description__icontains=q) |
+
+            Q(sku__icontains=q)
+
+        )
+
+    context = {
+
+        "products": products,
+
+        "total_products": products.count(),
+
+        "services": products.filter(
+            product_type="SERVICE"
+        ).count(),
+
+        "physical_products": products.filter(
+            product_type="PRODUCT"
+        ).count(),
+
+        "active_products": products.filter(
+            active=True
+        ).count(),
+
+    }
+
+    return render(
+
+        request,
+
+        "products/product_list.html",
+
+        context,
+
+    )
+
+
+@login_required
+def product_create(request):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    form = ProductForm(request.POST or None, request.FILES or None, organization=org)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            product = form.save()
+            messages.success(request, f"Product '{product.name}' created successfully.")
+            return redirect("product_detail", product.pk)
+
+    return render(
+        request,
+        "products/product_form.html",
+        {"form": form}
+    )
+
+
+@login_required
+def product_detail(request, pk):
+    org = _get_user_organization(request.user)
+    product = get_object_or_404(Product.objects.select_related('category'), pk=pk, organization=org)
+
+    profit = (product.selling_price or 0) - (product.cost_price or 0)
+    items = InvoiceItem.objects.filter(product=product).select_related('invoice', 'invoice__customer')
+    invoices_count = items.values('invoice').distinct().count()
+    revenue = items.aggregate(total=Sum('total'))['total'] or 0
+    recent_invoices = Invoice.objects.filter(items__product=product).distinct().order_by('-created_at')[:5]
+
+    context = {
+        'product': product,
+        'profit': profit,
+        'invoices_count': invoices_count,
+        'revenue': revenue,
+        'recent_invoices': recent_invoices,
+    }
+
+    return render(
+        request,
+        "products/product_detail.html",
+        context
+    )
+
+
+@login_required
+def product_update(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    product = get_object_or_404(Product, pk=pk, organization=org)
+    form = ProductForm(request.POST or None, request.FILES or None, instance=product, organization=org)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Product '{product.name}' updated successfully.")
+            return redirect("product_detail", product.pk)
+
+    return render(
+        request,
+        "products/product_form.html",
+        {"form": form, "product": product, "is_edit": True}
+    )
+
+
+@login_required
+def product_delete(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN'])
+    org = _get_user_organization(request.user)
+    product = get_object_or_404(Product, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        name = product.name
+        product.delete()
+        messages.success(request, f"Product '{name}' deleted successfully.")
+        return redirect("product_list")
+
+    return render(
+        request,
+        "products/product_confirm_delete.html",
+        {"object": product, "type": "Product"}
+    )

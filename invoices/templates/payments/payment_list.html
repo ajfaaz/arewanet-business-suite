@@ -1,0 +1,85 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #0F3F62;">Payments</h2>
+        <p class="text-muted small mb-0">Overview of all customer payments and transactions</p>
+    </div>
+
+    <a href="{% url 'invoice_list' %}" class="btn btn-outline-primary px-3 fw-semibold">
+        <i class="bi bi-file-earmark-text me-1"></i>View Invoices
+    </a>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 ps-4">Invoice</th>
+                        <th class="py-3">Customer</th>
+                        <th class="py-3">Reference</th>
+                        <th class="py-3">Method</th>
+                        <th class="py-3 text-end">Amount</th>
+                        <th class="py-3 text-center">Date</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th class="py-3 text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td class="ps-4">
+                            <a href="{% url 'invoice_detail' payment.invoice.id %}" class="fw-bold text-dark text-decoration-none">
+                                {{ payment.invoice.invoice_no }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-dark">{{ payment.invoice.customer.company_name }}</span>
+                        </td>
+                        <td>
+                            <code>{{ payment.reference }}</code>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ payment.get_payment_method_display }}</span>
+                        </td>
+                        <td class="text-end fw-bold text-success">
+                            {{ payment.amount|naira }}
+                        </td>
+                        <td class="text-center">
+                            {{ payment.payment_date|date:"d-M-Y" }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success px-2 py-1">Completed</span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'payment_detail' payment.id %}" class="btn btn-outline-primary btn-sm me-1">
+                                View
+                            </a>
+                            <a href="{% url 'payment_update' payment.id %}" class="btn btn-outline-warning btn-sm me-1">
+                                Edit
+                            </a>
+                            {% if payment.receipt %}
+                            <a href="{% url 'receipt_print' payment.receipt.id %}" target="_blank" class="btn btn-outline-dark btn-sm">
+                                Receipt
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-cash-stack fs-2 d-block mb-2 text-secondary"></i>
+                            No payments recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Create Invoice</h2>
+
+    <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary">
+        Back to Invoices
+    </a>
+</div>
+
+<div class="row">
+    <!-- Left Column: Form Configuration -->
+    <div class="col-lg-7">
+
+        <div class="alert alert-info shadow-sm mb-4">
+            Invoice Number will be generated automatically: <strong>ANV-2026-XXXX</strong>
+        </div>
+
+        {% if form.errors or formset.errors %}
+        <div class="alert alert-danger shadow-sm mb-4">
+            <h6 class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i> Please correct the errors below:</h6>
+            {{ form.non_field_errors }}
+            {{ formset.non_form_errors }}
+            {% for field in form %}
+                {% if field.errors %}
+                    <div class="small"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</div>
+                {% endif %}
+            {% endfor %}
+            {% for f in formset %}
+                {% if f.errors %}
+                    <div class="small"><strong>Item {{ forloop.counter }}:</strong> {{ f.errors }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- Invoice Information -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold">Invoice Information</h5>
+                </div>
+
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Customer</label>
+                            {{ form.customer.errors }}
+                            <div class="input-group">
+                                {{ form.customer }}
+                                <a href="{% url 'customer_create' %}" class="btn btn-outline-primary">
+                                    + New Customer
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-semibold">Invoice Date</label>
+                            {{ form.invoice_date }}
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-semibold">Due Date</label>
+                            {{ form.due_date }}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Project Name</label>
+                            {{ form.project_name }}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Deployment Phase</label>
+                            {{ form.deployment_phase }}
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-semibold">Status</label>
+                            {{ form.status }}
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-semibold">VAT Rate (%)</label>
+                            {{ form.vat }}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Items -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Invoice Items</h5>
+
+                    <button type="button" class="btn btn-sm btn-primary" id="add-row">
+                        <i class="fas fa-plus me-1"></i> Add Item
+                    </button>
+                </div>
+
+                <div class="card-body p-3">
+
+                    {{ formset.management_form }}
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0" id="invoice-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="220">Product</th>
+                                    <th>Description</th>
+                                    <th width="90">Qty</th>
+                                    <th width="140">Unit Price</th>
+                                    <th width="150">Line Total</th>
+                                    <th width="60">Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="invoice-items-body">
+                                {% for item_form in formset %}
+                                <tr class="invoice-row">
+                                    {{ item_form.id }}
+
+                                    <td>
+                                        {{ item_form.product }}
+                                    </td>
+
+                                    <td>
+                                        {{ item_form.description }}
+                                    </td>
+
+                                    <td>
+                                        {{ item_form.qty }}
+                                    </td>
+
+                                    <td>
+                                        {{ item_form.unit_price }}
+                                    </td>
+
+                                    <td>
+                                        <input type="text" class="form-control line-total" readonly value="₦0.00">
+                                    </td>
+
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-sm remove-row">
+                                            ×
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Totals Subcard -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong>Subtotal</strong>
+                        <span id="subtotal">₦0.00</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong id="vat-label">VAT (0%)</strong>
+                        <span id="vat-display">₦0.00</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <h5 class="mb-0 fw-bold">Total Due</h5>
+                        <h5 id="grand-total" class="mb-0 fw-bold text-success">₦0.00</h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mb-4">
+                <button type="submit" class="btn btn-success px-4 fw-semibold me-2">
+                    <i class="fas fa-check me-1"></i> Save Invoice
+                </button>
+
+                <a href="{% url 'invoice_list' %}" class="btn btn-secondary px-4">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Right Column: Live Presentation Preview -->
+    <div class="col-lg-5">
+        <div class="card shadow border-0 position-sticky" style="top: 20px;">
+            <div class="card-header bg-light fw-bold text-secondary">
+                Live Preview
+            </div>
+
+            <div class="card-body">
+                <div id="preview-area">
+                    <h4 class="text-dark fw-bold">ArewaNet Ventures</h4>
+                    <hr>
+
+                    <p class="text-muted text-uppercase tracking-wider small fw-bold">Invoice Preview</p>
+
+                    <p class="mb-2">
+                        <strong>Customer:</strong>
+                        <span id="preview-customer" class="text-secondary">-</span>
+                    </p>
+
+                    <p class="mb-3">
+                        <strong>Project:</strong>
+                        <span id="preview-project" class="text-secondary">-</span>
+                    </p>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <h4 class="mb-0 fw-bold">Total:</h4>
+                        <h3 id="preview-total" class="text-success fw-bold mb-0">₦0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Template Row for JS -->
+<template id="empty-form-template">
+    <tr class="invoice-row">
+        <td>
+            <select name="items-__prefix__-product" class="form-select product-select">
+                <option value="">-- Select Product --</option>
+                {% for p in formset.empty_form.fields.product.queryset %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="text" name="items-__prefix__-description" class="form-control description" placeholder="Item description">
+        </td>
+        <td>
+            <input type="number" name="items-__prefix__-qty" value="1" step="0.01" class="form-control qty">
+        </td>
+        <td>
+            <input type="number" step="0.01" name="items-__prefix__-unit_price" class="form-control unit-price" placeholder="0.00">
+        </td>
+        <td>
+            <input type="text" class="form-control line-total" readonly value="₦0.00">
+        </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm remove-row">
+                ×
+            </button>
+        </td>
+    </tr>
+</template>
+
+<script src="{% static 'invoices/js/invoice.js' %}"></script>
+{% endblock %}

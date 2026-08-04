@@ -1,0 +1,30 @@
+{% if status == "PAID" %}
+<span class="badge bg-success">
+    Paid
+</span>
+
+{% elif status == "PARTIAL" %}
+<span class="badge bg-warning text-dark">
+    Partial
+</span>
+
+{% elif status == "DRAFT" %}
+<span class="badge bg-secondary">
+    Draft
+</span>
+
+{% elif status == "SENT" %}
+<span class="badge bg-primary">
+    Sent
+</span>
+
+{% elif status == "CANCELLED" %}
+<span class="badge bg-danger">
+    Cancelled
+</span>
+
+{% else %}
+<span class="badge bg-secondary">
+    {{ status|default:"Unknown" }}
+</span>
+{% endif %}

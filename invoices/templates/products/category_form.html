@@ -1,0 +1,65 @@
+{% extends 'invoices/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1" style="color: #0F3F62;">
+                    {% if is_edit %}Edit Category{% else %}New Category{% endif %}
+                </h2>
+                <p class="text-muted small mb-0">Define product / service category classification</p>
+            </div>
+            <a href="{% url 'category_list' %}" class="btn btn-outline-secondary">
+                Back to Categories
+            </a>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-4">
+                {% if form.errors %}
+                <div class="alert alert-danger shadow-sm mb-4">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> Please correct the errors below:</h6>
+                    {{ form.non_field_errors }}
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <div class="small"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Category Name *</label>
+                        {{ form.name }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="form-check mb-4">
+                        {{ form.active }}
+                        <label class="form-check-label fw-semibold" for="{{ form.active.id_for_label }}">
+                            Active Category
+                        </label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i>Save Category
+                        </button>
+                        <a href="{% url 'category_list' %}" class="btn btn-secondary px-4">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

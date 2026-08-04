@@ -1,0 +1,330 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<!-- Header Title & Top Actions Bar -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #0F3F62;">
+            Invoice {{ invoice.invoice_no }}
+            {% if invoice.status == 'PAID' or invoice.status == 'Paid' %}
+            <span class="badge bg-success fs-6 align-middle ms-2">Paid</span>
+            {% elif invoice.status == 'PARTIAL' or invoice.status == 'Partially Paid' %}
+            <span class="badge bg-info text-dark fs-6 align-middle ms-2">Partially Paid</span>
+            {% elif invoice.status == 'UNPAID' or invoice.status == 'Unpaid' %}
+            <span class="badge bg-danger fs-6 align-middle ms-2">Unpaid</span>
+            {% else %}
+            <span class="badge bg-warning text-dark fs-6 align-middle ms-2">{{ invoice.get_status_display }}</span>
+            {% endif %}
+        </h2>
+        <p class="text-muted small mb-0">Created on {{ invoice.invoice_date|date:"F d, Y" }} | Due on {{ invoice.due_date|date:"F d, Y" }}</p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        {% if invoice.balance > 0 %}
+        <a href="{% url 'payment_create' invoice.id %}" class="btn btn-success fw-semibold shadow-sm">
+            <i class="bi bi-cash me-1"></i>Record Payment
+        </a>
+        {% endif %}
+        <a href="{% url 'invoice_print' invoice.id %}" target="_blank" class="btn btn-outline-dark fw-semibold">
+            <i class="bi bi-printer me-1"></i>Print
+        </a>
+        <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-danger fw-semibold">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </a>
+        <a href="{% url 'invoice_send' invoice.id %}" class="btn btn-info text-white fw-semibold">
+            <i class="bi bi-envelope me-1"></i>Email
+        </a>
+        <a href="{% url 'invoice_duplicate' invoice.id %}" class="btn btn-warning text-dark fw-semibold">
+            <i class="bi bi-files me-1"></i>Duplicate
+        </a>
+        <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-outline-danger fw-semibold">
+            <i class="bi bi-trash me-1"></i>Delete
+        </a>
+    </div>
+</div>
+
+<!-- Three Column Information Grid: Customer, Organization, Invoice Context -->
+<div class="row g-4 mb-4">
+    <!-- Customer Card -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="fw-bold mb-0 text-uppercase" style="color: #0F3F62;"><i class="bi bi-person me-2"></i>Customer Information</h6>
+            </div>
+            <div class="card-body">
+                <strong class="d-block fs-6 text-dark mb-1">{{ invoice.customer.company_name }}</strong>
+                {% if invoice.customer.contact_person %}
+                <p class="mb-1 text-muted small"><i class="bi bi-person-badge me-1"></i>{{ invoice.customer.contact_person }}</p>
+                {% endif %}
+                {% if invoice.customer.email %}
+                <p class="mb-1 text-muted small"><i class="bi bi-envelope me-1"></i>{{ invoice.customer.email }}</p>
+                {% endif %}
+                {% if invoice.customer.phone %}
+                <p class="mb-1 text-muted small"><i class="bi bi-telephone me-1"></i>{{ invoice.customer.phone }}</p>
+                {% endif %}
+                {% if invoice.customer.address %}
+                <p class="mb-0 text-muted small" style="white-space: pre-line;"><i class="bi bi-geo-alt me-1"></i>{{ invoice.customer.address }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Organization Card -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="fw-bold mb-0 text-uppercase" style="color: #0F3F62;"><i class="bi bi-building me-2"></i>Organization Information</h6>
+            </div>
+            <div class="card-body">
+                <strong class="d-block fs-6 text-dark mb-1">{{ organization.name }}</strong>
+                {% if organization.phone %}
+                <p class="mb-1 text-muted small"><i class="bi bi-telephone me-1"></i>{{ organization.phone }}</p>
+                {% endif %}
+                {% if organization.email %}
+                <p class="mb-1 text-muted small"><i class="bi bi-envelope me-1"></i>{{ organization.email }}</p>
+                {% endif %}
+                {% if organization.website %}
+                <p class="mb-0 text-muted small"><i class="bi bi-globe me-1"></i>{{ organization.website }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Metadata Card -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="fw-bold mb-0 text-uppercase" style="color: #0F3F62;"><i class="bi bi-info-circle me-2"></i>Invoice Context</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2 text-dark small">
+                    <strong>Invoice Date:</strong> {{ invoice.invoice_date|date:"M d, Y" }}
+                </p>
+                <p class="mb-2 text-dark small">
+                    <strong>Due Date:</strong> {{ invoice.due_date|date:"M d, Y" }}
+                </p>
+                <p class="mb-2 text-dark small">
+                    <strong>Project Name:</strong> {{ invoice.project_name|default:"-" }}
+                </p>
+                <p class="mb-0 text-dark small">
+                    <strong>Deployment Phase:</strong> {{ invoice.deployment_phase|default:"-" }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Items Table -->
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="fw-bold mb-0 text-dark">Invoice Items</h5>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-navy-header">
+                    <tr style="background-color: #0F3F62 !important; color: #ffffff !important;">
+                        <th class="py-3 ps-4 text-white border-0" style="background-color: #0F3F62 !important; width: 5%;">#</th>
+                        <th class="py-3 text-white border-0" style="background-color: #0F3F62 !important; width: 45%;">Description</th>
+                        <th class="py-3 text-center text-white border-0" style="background-color: #0F3F62 !important; width: 10%;">Unit</th>
+                        <th class="py-3 text-center text-white border-0" style="background-color: #0F3F62 !important; width: 8%;">Qty</th>
+                        <th class="py-3 text-end text-white border-0" style="background-color: #0F3F62 !important; width: 16%;">Unit Price</th>
+                        <th class="py-3 text-end pe-4 text-white border-0" style="background-color: #0F3F62 !important; width: 16%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr class="{% cycle '' 'bg-light' %}">
+                        <td class="ps-4 align-top">{{ forloop.counter }}</td>
+                        <td class="align-top">
+                            <strong class="d-block text-dark">{{ item.description|linebreaksbr }}</strong>
+                        </td>
+                        <td class="text-center align-top">{{ item.unit|default:"-" }}</td>
+                        <td class="text-center align-top">{{ item.qty }}</td>
+                        <td class="text-end align-top">
+                            {% if item.unit_price == 0 %}
+                            Included
+                            {% else %}
+                            {{ item.unit_price|naira }}
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4 align-top fw-semibold">{{ item.total|naira }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Payments Received History Table -->
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-cash-stack me-2 text-success"></i>Payments Received</h5>
+        {% if invoice.balance > 0 %}
+        <a href="{% url 'payment_create' invoice.id %}" class="btn btn-sm btn-success fw-semibold">
+            <i class="bi bi-plus-lg me-1"></i>Record Payment
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Date</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-center">Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in invoice.payments.all %}
+                    <tr>
+                        <td class="ps-4">{{ payment.payment_date|date:"M d, Y" }}</td>
+                        <td><span class="badge bg-secondary">{{ payment.get_payment_method_display }}</span></td>
+                        <td><code>{{ payment.reference }}</code></td>
+                        <td class="text-end fw-bold text-success">{{ payment.amount|naira }}</td>
+                        <td class="text-center">
+                            {% if payment.receipt %}
+                            <a href="{% url 'receipt_detail' payment.receipt.id %}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-receipt me-1"></i>View Receipt
+                            </a>
+                            <a href="{% url 'receipt_print' payment.receipt.id %}" target="_blank" class="btn btn-sm btn-outline-dark ms-1">
+                                <i class="bi bi-printer me-1"></i>Print
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            No payments recorded for this invoice yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Section: Payment Information, Terms & Totals Card -->
+<div class="row align-items-start mb-4">
+    <!-- Left Column: Payment & Terms -->
+    <div class="col-md-7 mb-3 mb-md-0">
+        <!-- Banking Information Card -->
+        <div class="card shadow-sm border-0 rounded-3 mb-3">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-uppercase" style="color: #0F3F62;"><i class="bi bi-credit-card me-2"></i>Payment Information</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-1 small"><strong>Bank:</strong> {{ organization.bank_name|default:"[Insert Bank Name]" }}</p>
+                <p class="mb-1 small"><strong>Account Name:</strong> {{ organization.account_name|default:organization.name }}</p>
+                <p class="mb-0 small"><strong>Account Number:</strong> {{ organization.account_number|default:"[Insert Account Number]" }}</p>
+            </div>
+        </div>
+
+        <!-- Terms & Conditions Card -->
+        {% if organization.terms %}
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-uppercase" style="color: #0F3F62;"><i class="bi bi-file-text me-2"></i>Terms & Conditions</h6>
+            </div>
+            <div class="card-body">
+                <div class="small text-muted mb-0">{{ organization.terms|linebreaks }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Signature & Stamp Card -->
+        {% if organization.signature or organization.stamp %}
+        <div class="card shadow-sm border-0 rounded-3 mt-3">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-uppercase" style="color: #0F3F62;"><i class="bi bi-patch-check me-2"></i>Authorization & Stamp</h6>
+            </div>
+            <div class="card-body d-flex align-items-center gap-4">
+                {% if organization.stamp %}
+                <div>
+                    <span class="text-muted small d-block mb-1">Company Stamp</span>
+                    <img src="{{ organization.stamp.url }}" alt="Stamp" style="max-height: 70px; object-fit: contain;">
+                </div>
+                {% endif %}
+                {% if organization.signature %}
+                <div>
+                    <span class="text-muted small d-block mb-1">Authorized Signature</span>
+                    <img src="{{ organization.signature.url }}" alt="Signature" style="max-height: 50px; object-fit: contain;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Financial Summary Totals & Payment Progress Card -->
+    <div class="col-md-5 text-end ms-auto">
+        <div class="card shadow-sm border-0 rounded-3 p-3">
+            <div class="d-flex justify-content-between py-1 fs-6">
+                <span class="text-dark">Subtotal:</span>
+                <span class="fw-semibold">{{ invoice.subtotal|naira }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1 fs-6 border-bottom">
+                <span class="text-dark">VAT ({{ invoice.vat|floatformat:"-2" }}%):</span>
+                <span class="fw-semibold">{{ invoice.vat_amount|naira }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 fs-5 fw-bold">
+                <span class="text-dark">Invoice Total:</span>
+                <span class="text-dark">{{ invoice.total_due|naira }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1 text-success fs-6">
+                <span>Amount Paid:</span>
+                <span class="fw-bold">{{ invoice.amount_paid|naira }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-3 mt-2 rounded-2 text-white" style="background-color: {% if invoice.balance == 0 %}#198754{% else %}#0F3F62{% endif %};">
+                <span class="fw-bold fs-6">BALANCE REMAINING:</span>
+                <span class="fw-bold fs-4">{{ invoice.balance|naira }}</span>
+            </div>
+
+            <!-- Payment Progress Bar -->
+            <div class="mt-3 text-start">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Payment Progress</span>
+                    <strong>{{ invoice.payment_percentage }}%</strong>
+                </div>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ invoice.payment_percentage }}%;" aria-valuenow="{{ invoice.payment_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Action Buttons Bar -->
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-body d-flex justify-content-start gap-2 flex-wrap">
+        {% if invoice.balance > 0 %}
+        <a href="{% url 'payment_create' invoice.id %}" class="btn btn-success px-3 fw-semibold">
+            <i class="bi bi-cash me-1"></i>Record Payment
+        </a>
+        {% endif %}
+        <a href="{% url 'invoice_print' invoice.id %}" target="_blank" class="btn btn-primary px-3 fw-semibold">
+            <i class="bi bi-printer me-1"></i>Print
+        </a>
+        <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-danger px-3 fw-semibold">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+        </a>
+        <a href="{% url 'invoice_send' invoice.id %}" class="btn btn-info text-white px-3 fw-semibold">
+            <i class="bi bi-envelope me-1"></i>Email Invoice
+        </a>
+        <a href="{% url 'invoice_duplicate' invoice.id %}" class="btn btn-warning text-dark px-3 fw-semibold">
+            <i class="bi bi-files me-1"></i>Duplicate
+        </a>
+        <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-outline-danger px-3 fw-semibold">
+            <i class="bi bi-trash me-1"></i>Delete
+        </a>
+    </div>
+</div>
+{% endblock %}

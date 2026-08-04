@@ -1,0 +1,17 @@
+<div class="btn-group btn-group-sm" role="group">
+    {% if view_url %}
+    <a href="{{ view_url }}" class="btn btn-outline-primary" title="View">
+        <i class="fas fa-eye"></i> View
+    </a>
+    {% endif %}
+    {% if edit_url %}
+    <a href="{{ edit_url }}" class="btn btn-warning" title="Edit">
+        <i class="fas fa-edit"></i> Edit
+    </a>
+    {% endif %}
+    {% if delete_url %}
+    <a href="{{ delete_url }}" class="btn btn-outline-danger" title="Delete">
+        <i class="fas fa-trash"></i>
+    </a>
+    {% endif %}
+</div>

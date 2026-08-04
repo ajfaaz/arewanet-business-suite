@@ -1,0 +1,74 @@
+{% extends 'invoices/base.html' %}
+
+{% block content %}
+
+{% url 'product_create' as create_url %}
+
+{% include "components/page_header.html" with title="Products & Services" subtitle="Manage all products and services." button_url=create_url button_text="Add Product" %}
+
+<div class="row">
+    {% include "components/stat_card.html" with title="Total Products" value=total_products %}
+    {% include "components/stat_card.html" with title="Services" value=services %}
+    {% include "components/stat_card.html" with title="Physical Products" value=physical_products %}
+    {% include "components/stat_card.html" with title="Active" value=active_products %}
+</div>
+
+{% include "components/search_filter.html" with placeholder="Search products..." %}
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th width="150">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>
+                        <strong>{{ product.name }}</strong>
+                    </td>
+                    <td>
+                        {{ product.category|default:"Uncategorized" }}
+                    </td>
+                    <td>
+                        {{ product.get_product_type_display }}
+                    </td>
+                    <td>
+                        ₦{{ product.selling_price }}
+                    </td>
+                    <td>
+                        {% if product.active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'product_detail' product.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                            View
+                        </a>
+                        <a href="{% url 'product_update' product.pk %}" class="btn btn-sm btn-warning">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="p-0">
+                        {% include "components/empty_state.html" with icon="fas fa-box-open" title="No Products Yet" message="Start by creating your first product or service." button_url=create_url button_text="Add Product" %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

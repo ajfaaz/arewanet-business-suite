@@ -1,0 +1,75 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">{{ customer.company_name }} - Billing History</h2>
+        <p class="text-muted small mb-0">Full record of invoices issued for {{ customer.company_name }}</p>
+    </div>
+
+    <div>
+        <a href="{% url 'customer_detail' customer.id %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-person me-1"></i>Customer Profile
+        </a>
+        <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary">
+            Back to Customers
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 ps-4">Invoice No</th>
+                        <th class="py-3">Date</th>
+                        <th class="py-3">Due Date</th>
+                        <th class="py-3">Project</th>
+                        <th class="py-3 text-end">Total Due</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th class="py-3 text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-dark">{{ invoice.invoice_no }}</td>
+                        <td>{{ invoice.invoice_date|date:"M d, Y" }}</td>
+                        <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                        <td>{{ invoice.project_name|default:"-" }}</td>
+                        <td class="text-end fw-semibold">{{ invoice.total_due|naira }}</td>
+                        <td class="text-center">
+                            {% if invoice.status == 'PAID' or invoice.status == 'Paid' %}
+                            <span class="badge bg-success px-3 py-2 rounded-pill">Paid</span>
+                            {% elif invoice.status == 'UNPAID' or invoice.status == 'Unpaid' %}
+                            <span class="badge bg-danger px-3 py-2 rounded-pill">Unpaid</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">{{ invoice.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                View
+                            </a>
+                            <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-sm btn-outline-success">
+                                PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                            No invoices found for this customer.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

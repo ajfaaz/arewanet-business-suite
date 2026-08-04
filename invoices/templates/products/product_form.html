@@ -1,0 +1,141 @@
+{% extends 'invoices/base.html' %}
+
+{% block content %}
+
+{% url 'product_list' as list_url %}
+{% if is_edit %}
+{% include "components/breadcrumbs.html" with parent_url=list_url parent_title="Products & Services" current_title="Edit Product" %}
+{% include "components/page_header.html" with title="Edit Product / Service" subtitle="Update item specifications, pricing, and availability." %}
+{% else %}
+{% include "components/breadcrumbs.html" with parent_url=list_url parent_title="Products & Services" current_title="New Product" %}
+{% include "components/page_header.html" with title="New Product / Service" subtitle="Create a new item in your inventory or service catalog." %}
+{% endif %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        {% if form.errors %}
+        <div class="alert alert-danger shadow-sm mb-4">
+            <h6 class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i> Please correct the errors below:</h6>
+            {{ form.non_field_errors }}
+            {% for field in form %}
+                {% if field.errors %}
+                    <div class="small"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Section 1: General Information -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-info-circle text-primary me-2"></i>General Information</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Category</label>
+                            {{ form.category }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Type</label>
+                            {{ form.product_type }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Name *</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">SKU</label>
+                            {{ form.sku }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Barcode</label>
+                            {{ form.barcode }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Pricing -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-tag text-success me-2"></i>Pricing</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Selling Price (₦) *</label>
+                            {{ form.selling_price }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Cost Price (₦)</label>
+                            {{ form.cost_price }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Minimum Price (₦)</label>
+                            {{ form.minimum_price }}
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check">
+                                {{ form.taxable }}
+                                <label class="form-check-label fw-semibold" for="{{ form.taxable.id_for_label }}">
+                                    Taxable Item
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Inventory -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-boxes text-warning me-2"></i>Inventory & Settings</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Unit of Measure</label>
+                            {{ form.unit }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Image</label>
+                            {{ form.image }}
+                        </div>
+                        <div class="col-md-2 mt-md-4">
+                            <div class="form-check">
+                                {{ form.active }}
+                                <label class="form-check-label fw-semibold" for="{{ form.active.id_for_label }}">
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex gap-2 mb-5">
+                <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                    <i class="fas fa-save me-1"></i> Save
+                </button>
+                <a href="{% url 'product_list' %}" class="btn btn-secondary px-4">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

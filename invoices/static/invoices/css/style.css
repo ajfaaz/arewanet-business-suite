@@ -1,0 +1,39 @@
+body{
+    background:#f5f7fb;
+}
+
+.card{
+    border:none;
+    border-radius:10px;
+}
+
+.table{
+    background:white;
+}
+
+.invoice-paper{
+    background:#fff;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 0 20px rgba(0,0,0,.08);
+}
+
+.invoice-row input{
+    min-height:42px;
+}
+
+.table th {
+    background: #f8f9fa;
+}
+
+.table-navy-header th,
+.table-invoice-header th,
+.table thead.table-navy th {
+    background-color: #0F3F62 !important;
+    color: #ffffff !important;
+}
+
+.total-due-banner {
+    background-color: #0F3F62 !important;
+    color: #ffffff !important;
+}

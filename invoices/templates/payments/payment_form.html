@@ -1,0 +1,100 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1" style="color: #0F3F62;">
+                    {% if is_edit %}Edit Payment{% else %}Record Payment{% endif %}
+                </h2>
+                <p class="text-muted small mb-0">Invoice: <strong>{{ invoice.invoice_no }}</strong> | Customer: <strong>{{ invoice.customer.company_name }}</strong></p>
+            </div>
+            <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-outline-secondary">
+                Back to Invoice
+            </a>
+        </div>
+
+        <!-- Financial Summary Snapshot Card -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4 bg-light">
+            <div class="card-body p-4">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Invoice Total</span>
+                        <strong class="fs-5 text-dark">{{ invoice.total_due|naira }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Amount Paid</span>
+                        <strong class="fs-5 text-success">{{ invoice.amount_paid|naira }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Balance Remaining</span>
+                        <strong class="fs-5 text-danger">{{ invoice.balance|naira }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="fw-bold mb-0 text-dark">Payment Details</h5>
+            </div>
+
+            <div class="card-body p-4">
+                {% if form.errors %}
+                <div class="alert alert-danger shadow-sm mb-4">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> Please correct the errors below:</h6>
+                    {{ form.non_field_errors }}
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <div class="small"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Amount (₦)</label>
+                            {{ form.amount }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Method</label>
+                            {{ form.payment_method }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Date</label>
+                            {{ form.payment_date }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Transaction Reference</label>
+                            {{ form.reference }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes / Remarks</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-success px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i>{% if is_edit %}Update Payment{% else %}Save Payment & Issue Receipt{% endif %}
+                        </button>
+                        <a href="{% if payment %}{% url 'payment_detail' payment.id %}{% else %}{% url 'invoice_detail' invoice.id %}{% endif %}" class="btn btn-secondary px-4">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

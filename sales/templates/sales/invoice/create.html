@@ -1,0 +1,53 @@
+{% extends "invoices/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'sales/css/invoice.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+
+    <div class="row">
+
+        <!-- LEFT COLUMN -->
+        <div class="col-lg-8">
+
+            {% include "sales/components/customer_card.html" %}
+
+            {% include "sales/components/invoice_details.html" %}
+
+            {% include "sales/components/invoice_items.html" %}
+
+            {% include "sales/components/document_notes.html" %}
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+
+        <div class="col-lg-4">
+
+            {% include "sales/components/invoice_summary.html" %}
+
+            {% include "sales/components/document_actions.html" %}
+
+            {% include "sales/components/activity_timeline.html" %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script src="{% static 'sales/js/invoice/calculations.js' %}"></script>
+
+<script src="{% static 'sales/js/invoice/row_manager.js' %}"></script>
+
+<script src="{% static 'sales/js/invoice/summary.js' %}"></script>
+
+{% endblock %}

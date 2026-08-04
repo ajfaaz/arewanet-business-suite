@@ -1,0 +1,84 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #0F3F62;">Payment Details</h2>
+        <p class="text-muted small mb-0">Transaction Reference: <code>{{ payment.reference }}</code></p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{% url 'payment_update' payment.id %}" class="btn btn-outline-warning fw-semibold">
+            <i class="bi bi-pencil me-1"></i>Edit Payment
+        </a>
+        <a href="{% url 'payment_delete' payment.id %}" class="btn btn-outline-danger fw-semibold">
+            <i class="bi bi-trash me-1"></i>Delete
+        </a>
+        {% if payment.receipt %}
+        <a href="{% url 'receipt_print' payment.receipt.id %}" target="_blank" class="btn btn-success fw-semibold shadow-sm">
+            <i class="bi bi-printer me-1"></i>Print Receipt
+        </a>
+        {% endif %}
+        <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-secondary fw-semibold">
+            Back to Invoice
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">Payment Summary</h5>
+            <span class="badge bg-success px-3 py-2 fs-6">Status: Completed</span>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <h6 class="text-uppercase text-muted fw-bold small mb-2">Customer & Invoice Context:</h6>
+                <p class="mb-1 text-dark"><strong>Customer:</strong> {{ invoice.customer.company_name }}</p>
+                <p class="mb-1 text-dark"><strong>Invoice No:</strong> <a href="{% url 'invoice_detail' invoice.id %}">{{ invoice.invoice_no }}</a></p>
+                <p class="mb-0 text-dark"><strong>Payment Method:</strong> <span class="badge bg-secondary">{{ payment.get_payment_method_display }}</span></p>
+            </div>
+
+            <div class="col-md-6 text-md-end">
+                <h6 class="text-uppercase text-muted fw-bold small mb-2">Transaction Metadata:</h6>
+                <p class="mb-1 text-dark"><strong>Payment Date:</strong> {{ payment.payment_date|date:"F d, Y" }}</p>
+                <p class="mb-1 text-dark"><strong>Reference No:</strong> <code>{{ payment.reference }}</code></p>
+                {% if payment.receipt %}
+                <p class="mb-0 text-dark"><strong>Receipt No:</strong> <code>{{ payment.receipt.receipt_no }}</code></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="p-4 rounded-3 text-center my-4" style="background-color: #F8F9FA; border: 1px solid #E5E7EB; border-left: 6px solid #198754;">
+            <span class="text-uppercase tracking-wider text-muted fw-bold small d-block mb-1">Amount Paid</span>
+            <h1 class="fw-bold text-success mb-0">{{ payment.amount|naira }}</h1>
+        </div>
+
+        <div class="row text-center border-top pt-3 mt-4">
+            <div class="col-4">
+                <span class="text-muted small">Invoice Total</span>
+                <p class="fw-bold mb-0 text-dark">{{ invoice.total_due|naira }}</p>
+            </div>
+            <div class="col-4">
+                <span class="text-muted small">Total Paid</span>
+                <p class="fw-bold mb-0 text-success">{{ invoice.amount_paid|naira }}</p>
+            </div>
+            <div class="col-4">
+                <span class="text-muted small">Balance Remaining</span>
+                <p class="fw-bold mb-0 text-danger">{{ invoice.balance|naira }}</p>
+            </div>
+        </div>
+
+        {% if payment.notes %}
+        <div class="mt-4 pt-3 border-top">
+            <h6 class="fw-bold text-dark small mb-1">Notes / Remarks:</h6>
+            <p class="text-muted small mb-0">{{ payment.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

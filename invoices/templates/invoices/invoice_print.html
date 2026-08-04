@@ -1,0 +1,178 @@
+{% extends 'invoices/base.html' %}
+{% load currency %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="invoice-paper p-4 p-md-5 bg-white shadow-sm rounded-3">
+        <!-- Top Header Row -->
+        <div class="row align-items-top mb-3">
+            <div class="col-6">
+                {% if organization.logo %}
+                <img src="{{ organization.logo.url }}" height="60" class="mb-2 d-block" alt="Logo">
+                {% else %}
+                <h3 class="fw-bold mb-1 text-dark">{{ organization.name|default:"ArewaNet Ventures" }}</h3>
+                {% endif %}
+                <p class="mb-0 text-muted small">Phone: {{ organization.phone|default:"09017862785" }}</p>
+                <p class="mb-0 text-muted small">Email: {{ organization.email|default:"info@arewanetventures.com" }}</p>
+                <p class="mb-0 text-muted small">Website: {{ organization.website|default:"arewanetventures.com" }}</p>
+            </div>
+
+            <div class="col-6 text-end">
+                <h1 class="display-6 fw-bold mb-2" style="color: #0F3F62; letter-spacing: -0.5px;">INVOICE</h1>
+                <table class="table table-borderless table-sm d-inline-block text-end mb-0" style="width: auto;">
+                    <tr>
+                        <td class="fw-bold pe-3 text-start" style="color: #0F3F62;">Invoice No:</td>
+                        <td class="text-end fw-semibold">{{ invoice.invoice_no }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold pe-3 text-start" style="color: #0F3F62;">Date:</td>
+                        <td class="text-end">{{ invoice.invoice_date|date:"F d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold pe-3 text-start" style="color: #0F3F62;">Due Date:</td>
+                        <td class="text-end">{{ invoice.due_date|date:"F d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold pe-3 text-start" style="color: #0F3F62;">Status:</td>
+                        <td class="text-end">
+                            {% if invoice.status == 'PAID' or invoice.status == 'Paid' %}
+                            <span class="fw-bold text-success">PAID</span>
+                            {% elif invoice.status == 'UNPAID' or invoice.status == 'Unpaid' %}
+                            <span class="fw-bold text-danger">UNPAID</span>
+                            {% else %}
+                            <span class="fw-bold text-warning">{{ invoice.status|upper }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <hr class="my-3" style="border-top: 2px solid #0F3F62; opacity: 1;">
+
+        <!-- Bill To & Project Context Row -->
+        <div class="row my-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <h6 class="text-uppercase text-muted fw-bold small mb-2">Bill To:</h6>
+                <h5 class="fw-bold mb-1" style="color: #0F3F62;">{{ invoice.customer.company_name }}</h5>
+                {% if invoice.customer.contact_person %}
+                <p class="mb-0 text-dark small">{{ invoice.customer.contact_person }}</p>
+                {% endif %}
+                <p class="mb-0 text-dark small" style="white-space: pre-line;">{{ invoice.customer.address }}</p>
+            </div>
+
+            <div class="col-md-6">
+                <h6 class="text-uppercase text-muted fw-bold small mb-2">Project Context:</h6>
+                <p class="mb-1 text-dark small">
+                    <strong class="fw-bold">Project:</strong> {{ invoice.project_name }}
+                </p>
+                <p class="mb-0 text-dark small">
+                    <strong class="fw-bold">Deployment Phase:</strong> {{ invoice.deployment_phase }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="table-responsive my-4">
+            <table class="table align-middle">
+                <thead class="table-navy-header">
+                    <tr style="background-color: #0F3F62 !important; color: #ffffff !important;">
+                        <th class="py-2 text-white border-0" style="background-color: #0F3F62 !important; color: #ffffff !important; width: 5%;">S/N</th>
+                        <th class="py-2 text-white border-0" style="background-color: #0F3F62 !important; color: #ffffff !important; width: 45%;">ITEM DESCRIPTION</th>
+                        <th class="py-2 text-white border-0 text-center" style="background-color: #0F3F62 !important; color: #ffffff !important; width: 10%;">UNIT</th>
+                        <th class="py-2 text-white border-0 text-center" style="background-color: #0F3F62 !important; color: #ffffff !important; width: 8%;">QTY</th>
+                        <th class="py-2 text-white border-0 text-end" style="background-color: #0F3F62 !important; color: #ffffff !important; width: 16%;">UNIT PRICE</th>
+                        <th class="py-2 text-white border-0 text-end" style="background-color: #0F3F62 !important; color: #ffffff !important; width: 16%;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in invoice.items.all %}
+                    <tr class="{% cycle '' 'bg-light' %}">
+                        <td class="py-3 align-top">{{ forloop.counter }}</td>
+                        <td class="py-3 align-top">
+                            <strong class="d-block text-dark mb-1">{{ item.description|linebreaksbr }}</strong>
+                        </td>
+                        <td class="py-3 align-top text-center">{{ item.unit|default:"-" }}</td>
+                        <td class="py-3 align-top text-center">{{ item.qty }}</td>
+                        <td class="py-3 align-top text-end">
+                            {% if item.unit_price == 0 %}
+                            Included
+                            {% else %}
+                            {{ item.unit_price|naira }}
+                            {% endif %}
+                        </td>
+                        <td class="py-3 align-top text-end fw-semibold">{{ item.total|naira }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bottom Matrix: Payment Instructions & Financial Totals -->
+        <div class="row align-items-start my-4">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <div class="p-3 rounded-2" style="background-color: #F8F9FA; border: 1px solid #E5E7EB; border-left: 4px solid #0F3F62;">
+                    <h6 class="fw-bold mb-2 text-uppercase" style="color: #0F3F62;">Payment Instructions</h6>
+                    <p class="small text-muted mb-2">Please execute bank transfers directly using the details below:</p>
+                    <p class="mb-1 small"><strong>Bank Name:</strong> {{ organization.bank_name|default:"[Insert Bank Name, e.g., GTBank]" }}</p>
+                    <p class="mb-1 small"><strong>Account Name:</strong> {{ organization.account_name|default:organization.name }}</p>
+                    <p class="mb-0 small"><strong>Account No:</strong> {{ organization.account_number|default:"[Insert 10-Digit Account Number]" }}</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 text-end ms-auto">
+                <div class="d-inline-block w-100" style="max-width: 320px;">
+                    <div class="d-flex justify-content-between py-1">
+                        <span class="text-dark">Subtotal:</span>
+                        <span class="fw-semibold">{{ invoice.subtotal|naira }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-dark">VAT ({{ invoice.vat|floatformat:"-2" }}%):</span>
+                        <span class="fw-semibold">{{ invoice.vat_amount|naira }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-3 mt-2 rounded-1 text-white" style="background-color: #0F3F62;">
+                        <span class="fw-bold fs-6">Total Due:</span>
+                        <span class="fw-bold fs-5">{{ invoice.total_due|naira }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4" style="border-top: 1px solid #E5E7EB;">
+
+        <!-- Terms & Conditions -->
+        <div class="mt-3">
+            <h6 class="fw-bold text-dark mb-1">Terms & Conditions:</h6>
+            <p class="text-muted small mb-0">
+                {% if organization.terms %}
+                {{ organization.terms }}
+                {% else %}
+                Payment is expected within 30 days of the invoice date. Please forward your payment confirmation receipt directly to <strong>info@arewanetventures.com</strong> for immediate system deployment activation processing.
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Print Footer with Signature & Stamp -->
+        <div class="d-flex justify-content-between align-items-end mt-5 pt-3 border-top">
+            <div>
+                <span class="text-muted small fst-italic">Thank you for your business!</span>
+            </div>
+            <div class="text-center d-flex align-items-center gap-3">
+                {% if organization.stamp %}
+                <div>
+                    <img src="{{ organization.stamp.url }}" alt="Stamp" style="max-height: 80px; object-fit: contain;">
+                </div>
+                {% endif %}
+                <div style="min-width: 180px;">
+                    {% if organization.signature %}
+                    <img src="{{ organization.signature.url }}" alt="Signature" style="max-height: 50px; object-fit: contain;" class="d-block mx-auto mb-1">
+                    {% else %}
+                    <div style="border-bottom: 1px solid #000; height: 30px;"></div>
+                    {% endif %}
+                    <small class="text-muted d-block border-top pt-1 mt-1">Authorized Signature</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

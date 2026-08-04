@@ -1,0 +1,45 @@
+{% extends "invoices/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'sales/css/invoice.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: #0F3F62;">Invoice {{ invoice.invoice_no|default:invoice.document_number }}</h2>
+            {% include "sales/components/status_badge.html" with status=invoice.status %}
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'invoice_print' invoice.id %}" target="_blank" class="btn btn-outline-dark fw-semibold">
+                <i class="fas fa-print me-1"></i> Print
+            </a>
+            <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-outline-primary fw-semibold">
+                <i class="fas fa-file-pdf me-1"></i> PDF
+            </a>
+            <a href="{% url 'invoice_list' %}" class="btn btn-secondary fw-semibold">
+                Back to Invoices
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            {% include "sales/components/customer_card.html" %}
+            {% include "sales/components/invoice_items.html" %}
+            {% if invoice.notes %}
+            {% include "sales/components/document_notes.html" %}
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            {% include "sales/components/totals_card.html" %}
+            {% include "sales/components/document_actions.html" %}
+            {% include "sales/components/activity_timeline.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

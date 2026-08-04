@@ -1,0 +1,25 @@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold">Activity</h5>
+    </div>
+
+    <div class="card-body p-4">
+        {% if activities %}
+        <ul class="list-unstyled mb-0">
+            {% for act in activities %}
+            <li class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-primary me-2">{{ act.get_action_display }}</span>
+                    <small class="text-muted">{{ act.timestamp|date:"M d, H:i" }}</small>
+                </div>
+                {% if act.notes %}<p class="small text-muted mb-0 mt-1">{{ act.notes }}</p>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted mb-0">
+            No activities yet.
+        </p>
+        {% endif %}
+    </div>
+</div>
