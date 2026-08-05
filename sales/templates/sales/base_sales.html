@@ -1,0 +1,23 @@
+{% extends "invoices/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'abs/css/abs.css' %}">
+<link rel="stylesheet" href="{% static 'sales/css/invoice.css' %}">
+{% block sales_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="abs-page">
+    {% include "components/layout/breadcrumb.html" %}
+
+    {% block sales_content %}
+    {% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'abs/js/abs.js' %}"></script>
+{% block sales_js %}
+{% endblock %}
+{% endblock %}

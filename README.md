@@ -1,30 +1,71 @@
 # ArewaNet Business Suite
 
-A modern, modular ERP and Business Management System developed by ArewaNet Ventures.
+A modern ERP and Business Management Platform developed by ArewaNet Ventures.
 
-## Modules
+---
 
-- Sales
-- Invoice Management
-- Quotations
-- CRM
-- Customers
-- Products
-- Inventory
-- Reports
-- Customer Portal
-- API
+## Features
 
-## Tech Stack
+✔ Customer Management
+
+✔ Invoice Management
+
+✔ Quotations
+
+✔ Payments
+
+✔ Products & Services
+
+✔ Reports
+
+✔ Customer Portal (Coming Soon)
+
+---
+
+## Screenshots
+
+(We'll add screenshots later)
+
+---
+
+## Technology
 
 - Django
 - PostgreSQL
 - Bootstrap 5
-- HTMX
 - JavaScript
-- HTML/CSS
+- HTML5
+- CSS3
 
-## Developed by
+---
+
+## Installation
+
+```bash
+git clone ...
+
+pip install -r requirements.txt
+
+python manage.py migrate
+
+python manage.py runserver
+```
+
+---
+
+## Roadmap
+
+- Invoice
+- Quotations
+- CRM
+- Inventory
+- Reports
+- Customer Portal
+- REST API
+- Mobile App
+
+---
+
+Developed by
 
 ArewaNet Ventures
-https://arewanetventures.com

@@ -1,0 +1,7 @@
+/* ABS Helper Utilities */
+.abs-flex-between { display: flex; align-items: center; justify-content: space-between; }
+.abs-flex-gap-2 { display: flex; gap: var(--space-2, 8px); }
+.abs-flex-gap-3 { display: flex; gap: var(--space-3, 12px); }
+.abs-text-muted { color: #64748B !important; }
+.abs-text-success { color: var(--abs-success) !important; }
+.abs-text-danger { color: var(--abs-danger) !important; }

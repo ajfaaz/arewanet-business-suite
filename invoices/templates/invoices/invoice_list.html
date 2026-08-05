@@ -71,6 +71,9 @@
                             <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-outline-primary btn-sm me-1">
                                 View
                             </a>
+                            <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-outline-warning btn-sm me-1">
+                                Edit
+                            </a>
                             <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-outline-success btn-sm">
                                 PDF
                             </a>

@@ -1,40 +1,34 @@
-{% extends "invoices/base.html" %}
+{% extends "sales/base_sales.html" %}
 {% load static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'sales/css/invoice.css' %}">
-{% endblock %}
+{% block sales_content %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold mb-0" style="color: #0F3F62;">Edit Invoice</h2>
-        <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary">Back to Invoices</a>
-    </div>
+{% url 'invoice_list' as invoice_list_url %}
+{% include "components/layout/page_header.html" with title="Edit Invoice" subtitle="Update invoice specifications, line items, and terms" button_text="Back" button_url=invoice_list_url button_icon="arrow-left" %}
 
-    <form method="POST">
-        {% csrf_token %}
-        <div class="row">
-            <!-- LEFT COLUMN -->
-            <div class="col-lg-8">
-                {% include "sales/components/customer_card.html" %}
-                {% include "sales/components/invoice_details.html" %}
-                {% include "sales/components/invoice_items.html" %}
-                {% include "sales/components/document_notes.html" %}
-            </div>
-
-            <!-- RIGHT COLUMN -->
-            <div class="col-lg-4">
-                {% include "sales/components/invoice_summary.html" %}
-                {% include "sales/components/document_actions.html" %}
-                {% include "sales/components/activity_timeline.html" %}
-            </div>
+<form method="POST">
+    {% csrf_token %}
+    <div class="row">
+        <!-- LEFT COLUMN -->
+        <div class="col-lg-8">
+            {% include "sales/components/customer_card.html" %}
+            {% include "sales/components/invoice_details.html" %}
+            {% include "sales/components/invoice_items.html" %}
+            {% include "sales/components/document_notes.html" %}
         </div>
-    </form>
-</div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-lg-4">
+            {% include "components/cards/invoice_summary.html" %}
+            {% include "components/cards/quick_actions.html" %}
+            {% include "sales/components/activity_timeline.html" %}
+        </div>
+    </div>
+</form>
+
 {% endblock %}
 
-{% block extra_js %}
+{% block sales_js %}
 <script src="{% static 'sales/js/invoice/calculations.js' %}"></script>
 <script src="{% static 'sales/js/invoice/row_manager.js' %}"></script>
 <script src="{% static 'sales/js/invoice/summary.js' %}"></script>

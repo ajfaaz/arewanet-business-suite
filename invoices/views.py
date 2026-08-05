@@ -439,6 +439,53 @@ def invoice_create(request):
 
 
 @login_required
+def invoice_update(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(Invoice, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, instance=invoice, organization=org)
+        formset = InvoiceItemFormSet(request.POST, instance=invoice, prefix='items', form_kwargs={'organization': org})
+
+        if form.is_valid() and formset.is_valid():
+            invoice = form.save(commit=False)
+            invoice.organization = org
+            invoice.save()
+            formset.save()
+
+            subtotal = invoice.items.aggregate(total=Sum('total'))['total'] or 0
+            invoice.subtotal = subtotal
+            vat_rate = invoice.vat or 0
+            vat_amount = (subtotal * vat_rate) / 100
+            invoice.total_due = subtotal + vat_amount
+            invoice.save()
+
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Invoice {invoice.invoice_no} Updated"
+            )
+
+            messages.success(request, f"Invoice {invoice.invoice_no} updated successfully.")
+            return redirect('invoice_detail', pk=invoice.pk)
+
+    else:
+        form = InvoiceForm(instance=invoice, organization=org)
+        formset = InvoiceItemFormSet(instance=invoice, prefix='items', form_kwargs={'organization': org})
+
+    return render(
+        request,
+        'sales/invoice/edit.html',
+        {
+            'form': form,
+            'formset': formset,
+            'invoice': invoice,
+            'is_edit': True,
+        }
+    )
+
+
+@login_required
 def product_info(request, pk):
     organization = _get_user_organization(request.user)
     product = get_object_or_404(

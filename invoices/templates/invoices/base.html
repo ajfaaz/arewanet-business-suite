@@ -79,6 +79,11 @@
 
             <ul class="nav flex-column mt-3 flex-grow-1">
                 <li class="nav-item">
+                    <small class="text-uppercase text-muted px-3 fw-bold">
+                        Sales
+                    </small>
+                </li>
+                <li class="nav-item">
                     <a href="{% url 'dashboard' %}"
                         class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                         <i class="bi bi-speedometer2"></i> Dashboard
@@ -96,30 +101,20 @@
                         <i class="bi bi-cash-stack"></i> Payments
                     </a>
                 </li>
-                <!-- PRODUCTS -->
-                <li class="nav-item mt-3">
-                    <small class="text-uppercase text-muted px-3">
-                        Inventory
-                    </small>
-                </li>
-
-                <li class="nav-item">
-                    <a href="{% url 'product_list' %}" class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="fas fa-box"></i>
-                        Products & Services
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="{% url 'category_list' %}" class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="fas fa-tags"></i>
-                        Categories
-                    </a>
-                </li>
                 <li class="nav-item">
                     <a href="{% url 'customer_list' %}"
                         class="nav-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-people"></i> Customers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'product_list' %}" class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-box"></i> Products & Services
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'category_list' %}" class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-tags"></i> Categories
                     </a>
                 </li>
                 <li class="nav-item">

@@ -1,0 +1,60 @@
+/* ABS Sidebar Component */
+.abs-sidebar {
+    width: 260px;
+    background: var(--abs-dark, #1E293B);
+    color: var(--abs-white, #FFFFFF);
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4, 16px);
+    transition: all 0.3s ease;
+    z-index: 1040;
+}
+
+.abs-sidebar-brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: var(--space-6, 24px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.abs-sidebar-nav {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+}
+
+.abs-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    color: #94A3B8;
+    text-decoration: none;
+    border-radius: var(--radius-md, 10px);
+    transition: all 0.2s ease;
+}
+
+.abs-sidebar-link:hover,
+.abs-sidebar-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--abs-white);
+}
+
+/* Mobile Sidebar Drawer Styling */
+@media (max-width: 991.98px) {
+    .abs-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: -260px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .abs-sidebar.show,
+    .abs-sidebar.active {
+        left: 0;
+    }
+}

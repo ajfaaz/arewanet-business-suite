@@ -1,0 +1,6 @@
+/* ABS Dashboard Grid & Metrics */
+.abs-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-5, 20px);
+}

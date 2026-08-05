@@ -1,53 +1,35 @@
-{% extends "invoices/base.html" %}
+{% extends "sales/base_sales.html" %}
 {% load static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'sales/css/invoice.css' %}">
-{% endblock %}
+{% block sales_content %}
 
-{% block content %}
+{% url 'invoice_list' as invoice_list_url %}
+{% include "components/layout/page_header.html" with title="Create Invoice" subtitle="Generate a professional customer invoice" button_text="Back" button_url=invoice_list_url button_icon="arrow-left" %}
 
-<div class="container-fluid py-4">
-
+<form method="POST">
+    {% csrf_token %}
     <div class="row">
-
-        <!-- LEFT COLUMN -->
+        <!-- LEFT COLUMN (Form Fields & Items) -->
         <div class="col-lg-8">
-
             {% include "sales/components/customer_card.html" %}
-
             {% include "sales/components/invoice_details.html" %}
-
             {% include "sales/components/invoice_items.html" %}
-
             {% include "sales/components/document_notes.html" %}
-
         </div>
 
-        <!-- RIGHT COLUMN -->
-
+        <!-- RIGHT COLUMN (Summary & Quick Actions) -->
         <div class="col-lg-4">
-
-            {% include "sales/components/invoice_summary.html" %}
-
-            {% include "sales/components/document_actions.html" %}
-
+            {% include "components/cards/invoice_summary.html" %}
+            {% include "components/cards/quick_actions.html" %}
             {% include "sales/components/activity_timeline.html" %}
-
         </div>
-
     </div>
-
-</div>
+</form>
 
 {% endblock %}
 
-{% block extra_js %}
-
+{% block sales_js %}
 <script src="{% static 'sales/js/invoice/calculations.js' %}"></script>
-
 <script src="{% static 'sales/js/invoice/row_manager.js' %}"></script>
-
 <script src="{% static 'sales/js/invoice/summary.js' %}"></script>
-
 {% endblock %}

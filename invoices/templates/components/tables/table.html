@@ -1,0 +1,14 @@
+<div class="abs-table-responsive">
+    <table class="abs-table">
+        <thead>
+            <tr>
+                {% for col in columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% block table_rows %}{% endblock %}
+        </tbody>
+    </table>
+</div>

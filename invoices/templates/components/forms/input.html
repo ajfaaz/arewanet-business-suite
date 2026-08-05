@@ -1,0 +1,4 @@
+<div class="abs-form-group">
+    {% if label %}<label class="abs-label">{{ label }}</label>{% endif %}
+    <input type="{{ type|default:'text' }}" name="{{ name }}" value="{{ value }}" class="abs-input" placeholder="{{ placeholder }}">
+</div>

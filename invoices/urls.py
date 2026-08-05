@@ -47,6 +47,12 @@ urlpatterns = [
     ),
 
     path(
+        'invoice/<int:pk>/edit/',
+        views.invoice_update,
+        name='invoice_update'
+    ),
+
+    path(
         'invoice/<int:pk>/pdf/',
         views.invoice_pdf,
         name='invoice_pdf'

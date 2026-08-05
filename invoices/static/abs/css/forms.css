@@ -1,0 +1,33 @@
+/* ABS Form Control Components */
+.abs-input,
+.abs-select,
+.abs-textarea {
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--abs-border);
+    padding: 10px 14px;
+    background-color: var(--abs-white);
+    color: var(--abs-text);
+    width: 100%;
+    font-size: 0.925rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.abs-input:focus,
+.abs-select:focus,
+.abs-textarea:focus {
+    outline: none;
+    border-color: var(--abs-primary);
+    box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.15);
+}
+
+.abs-form-group {
+    margin-bottom: var(--space-4, 16px);
+}
+
+.abs-label {
+    display: block;
+    margin-bottom: var(--space-2, 8px);
+    font-weight: 600;
+    color: var(--abs-dark);
+    font-size: 0.875rem;
+}

@@ -1,0 +1,10 @@
+<div class="text-center py-5 px-3">
+    <div class="mb-3 text-secondary" style="font-size: 2.5rem;">
+        {% if icon %}<i class="{{ icon }}"></i>{% else %}<i class="bi bi-folder-x"></i>{% endif %}
+    </div>
+    <h5 class="fw-bold text-dark mb-1">{{ title|default:"No Data Yet" }}</h5>
+    <p class="text-muted small mb-3">{{ message|default:"There are no items to display at this time." }}</p>
+    {% if button_url %}
+    {% include "components/buttons/button.html" with text=button_text url=button_url type="primary" icon=button_icon|default:"plus-circle" %}
+    {% endif %}
+</div>

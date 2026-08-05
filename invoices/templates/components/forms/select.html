@@ -1,0 +1,9 @@
+<div class="abs-form-group">
+    {% if label %}<label class="abs-label">{{ label }}</label>{% endif %}
+    <select name="{{ name }}" class="abs-select">
+        {% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}
+        {% for option in options %}
+        <option value="{{ option.id }}" {% if option.id == value %}selected{% endif %}>{{ option.name }}</option>
+        {% endfor %}
+    </select>
+</div>

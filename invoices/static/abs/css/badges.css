@@ -1,0 +1,16 @@
+/* ABS Badges Component */
+.abs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.abs-badge-success { background: #D1E7DD; color: #0F5132; }
+.abs-badge-warning { background: #FFF3CD; color: #664D03; }
+.abs-badge-danger { background: #F8D7DA; color: #842029; }
+.abs-badge-info { background: #CFF4FC; color: #055160; }
+.abs-badge-secondary { background: #E2E8F0; color: #475569; }

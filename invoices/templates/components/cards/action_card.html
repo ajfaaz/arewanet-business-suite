@@ -1,0 +1,11 @@
+<div class="abs-card mb-4">
+    <div class="abs-card-header">
+        <h5 class="mb-0 fw-bold">{{ title|default:"Actions" }}</h5>
+    </div>
+    <div class="abs-card-body d-grid gap-2">
+        <a href="{{ primary_url|default:'#' }}" class="abs-btn abs-btn-primary">{{ primary_label|default:"Save" }}</a>
+        {% if secondary_url %}
+        <a href="{{ secondary_url }}" class="abs-btn abs-btn-outline">{{ secondary_label|default:"Cancel" }}</a>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,17 @@
+<div class="abs-card mb-4">
+    <div class="abs-card-header">
+        <h5 class="mb-0 fw-bold">Activity History</h5>
+    </div>
+    <div class="abs-card-body">
+        <ul class="abs-timeline mb-0">
+            {% for item in items %}
+            <li class="abs-timeline-item">
+                <strong class="d-block">{{ item.action }}</strong>
+                <small class="text-muted">{{ item.timestamp|date:"M d, H:i" }}</small>
+            </li>
+            {% empty %}
+            <li class="text-muted small">No activity logged.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>

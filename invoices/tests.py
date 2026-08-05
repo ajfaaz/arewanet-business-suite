@@ -376,3 +376,38 @@ class InvoiceViewsTest(TestCase):
         res_prod_del = self.client.post(reverse('product_delete', kwargs={'pk': product.pk}))
         self.assertEqual(res_prod_del.status_code, 302)
         self.assertFalse(Product.objects.filter(pk=product.pk).exists())
+
+    def test_invoice_update_view(self):
+        item1 = InvoiceItem.objects.create(
+            invoice=self.invoice,
+            description="Development Hours",
+            qty=5,
+            unit_price=10000.00,
+            total=50000.00
+        )
+        # GET invoice update page
+        res_get = self.client.get(reverse('invoice_update', kwargs={'pk': self.invoice.pk}))
+        self.assertEqual(res_get.status_code, 200)
+
+        # POST invoice update
+        res_post = self.client.post(reverse('invoice_update', kwargs={'pk': self.invoice.pk}), {
+            'customer': self.customer.pk,
+            'invoice_date': '2026-08-05',
+            'due_date': '2026-08-20',
+            'project_name': 'Updated Mobile App Project',
+            'deployment_phase': 'Phase 2 Updated',
+            'status': 'PARTIAL',
+            'vat': '7.50',
+            'items-TOTAL_FORMS': '1',
+            'items-INITIAL_FORMS': '1',
+            'items-MIN_NUM_FORMS': '0',
+            'items-MAX_NUM_FORMS': '1000',
+            'items-0-id': item1.pk,
+            'items-0-description': 'Updated Development Hours',
+            'items-0-qty': '10',
+            'items-0-unit_price': '15000.00'
+        })
+        self.assertEqual(res_post.status_code, 302)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.project_name, 'Updated Mobile App Project')
+        self.assertEqual(self.invoice.status, 'PARTIAL')

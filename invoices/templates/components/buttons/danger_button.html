@@ -1,0 +1,4 @@
+<a href="{{ url|default:'#' }}" class="abs-btn abs-btn-danger">
+    {% if icon %}<i class="{{ icon }}"></i>{% else %}<i class="fas fa-trash"></i>{% endif %}
+    {{ label|default:"Delete" }}
+</a>

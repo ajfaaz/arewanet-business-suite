@@ -1,0 +1,18 @@
+{% comment %}
+Reusable Button Component
+
+Parameters:
+- text
+- url
+- type (primary, success, danger, warning, outline)
+- icon (bootstrap icon name without "bi-")
+- size (sm, lg)
+{% endcomment %}
+
+<a href="{{ url|default:'#' }}"
+   class="abs-btn abs-btn-{{ type|default:'primary' }} {% if size %}abs-btn-{{ size }}{% endif %}">
+    {% if icon %}
+        <i class="bi bi-{{ icon }}"></i>
+    {% endif %}
+    {{ text }}
+</a>

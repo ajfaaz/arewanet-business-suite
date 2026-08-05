@@ -1,0 +1,15 @@
+/* ABS Typography System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--abs-text);
+    background-color: #F5F7FA;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--abs-dark);
+    font-weight: 700;
+}

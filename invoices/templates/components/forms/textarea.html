@@ -1,0 +1,4 @@
+<div class="abs-form-group">
+    {% if label %}<label class="abs-label">{{ label }}</label>{% endif %}
+    <textarea name="{{ name }}" class="abs-textarea" rows="{{ rows|default:3 }}" placeholder="{{ placeholder }}">{{ value }}</textarea>
+</div>

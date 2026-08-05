@@ -1,0 +1,45 @@
+/* ABS Table Components */
+.abs-table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--abs-border);
+    box-shadow: var(--shadow-sm);
+    background: var(--abs-white);
+}
+
+.abs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--abs-white);
+    font-size: 0.925rem;
+}
+
+.abs-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--abs-light);
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    text-align: left;
+    font-weight: 600;
+    color: var(--abs-dark);
+    border-bottom: 2px solid var(--abs-border);
+}
+
+.abs-table td {
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    border-bottom: 1px solid var(--abs-border);
+    vertical-align: middle;
+}
+
+/* Zebra rows */
+.abs-table tbody tr:nth-of-type(even) {
+    background-color: #FAFAFA;
+}
+
+/* Hover effect */
+.abs-table tbody tr:hover {
+    background-color: #F1F5F9;
+    transition: background-color 0.15s ease-in-out;
+}

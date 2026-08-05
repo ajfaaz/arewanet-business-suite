@@ -1,0 +1,23 @@
+<div class="abs-page-header">
+    <div>
+        <h2 class="abs-page-title">
+            {{ title }}
+        </h2>
+        {% if subtitle %}
+        <p class="abs-page-subtitle">
+            {{ subtitle }}
+        </p>
+        {% endif %}
+    </div>
+
+    {% if button_text %}
+    <div>
+        <a href="{{ button_url|default:'#' }}" class="abs-btn abs-btn-primary">
+            {% if button_icon %}
+            <i class="bi bi-{{ button_icon }}"></i>
+            {% endif %}
+            {{ button_text }}
+        </a>
+    </div>
+    {% endif %}
+</div>

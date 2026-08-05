@@ -1,0 +1,10 @@
+/* ABS Navbar Component */
+.abs-navbar {
+    height: 64px;
+    background: var(--abs-white);
+    border-bottom: 1px solid var(--abs-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-6, 24px);
+}

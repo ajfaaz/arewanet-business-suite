@@ -1,0 +1,56 @@
+/* ABS Button Components */
+.abs-btn {
+    border-radius: var(--radius-md, 10px);
+    padding: 10px 18px;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.abs-btn-sm {
+    padding: 6px 12px;
+    font-size: 0.825rem;
+    border-radius: var(--radius-sm, 6px);
+}
+
+.abs-btn-primary {
+    background: var(--abs-primary);
+    color: white;
+}
+
+.abs-btn-primary:hover {
+    background: var(--abs-primary-hover);
+    color: white;
+}
+
+.abs-btn-success {
+    background: var(--abs-success);
+    color: white;
+}
+
+.abs-btn-danger {
+    background: var(--abs-danger);
+    color: white;
+}
+
+.abs-btn-warning {
+    background: var(--abs-warning);
+    color: var(--abs-dark);
+}
+
+.abs-btn-outline {
+    background: transparent;
+    border: 1px solid var(--abs-border);
+    color: var(--abs-text);
+}
+
+.abs-btn-outline:hover {
+    background: var(--abs-light);
+}
