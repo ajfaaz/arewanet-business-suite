@@ -399,29 +399,10 @@ def invoice_create(request):
         if form.is_valid() and formset.is_valid():
             invoice = form.save(commit=False)
             invoice.organization = org
-            invoice.save()
+            items = formset.save(commit=False)
 
-            formset.instance = invoice
-            formset.save()
-
-            from decimal import Decimal
-            subtotal = sum(
-                item.total
-                for item in invoice.items.all()
-            ) or Decimal('0')
-
-            vat_rate = Decimal(str(invoice.vat or 0))
-            vat_amount = (subtotal * vat_rate) / Decimal('100')
-
-            invoice.subtotal = subtotal
-            invoice.total_due = subtotal + vat_amount
-            invoice.save()
-
-            ActivityLog.objects.create(
-                user=request.user,
-                action=f"Invoice {invoice.invoice_no} Created"
-            )
-
+            from invoices.services import InvoiceService
+            invoice = InvoiceService.create_invoice(invoice, items, user=request.user)
             return redirect('invoice_detail', invoice.id)
 
     else:
@@ -451,20 +432,10 @@ def invoice_update(request, pk):
         if form.is_valid() and formset.is_valid():
             invoice = form.save(commit=False)
             invoice.organization = org
-            invoice.save()
-            formset.save()
+            items = formset.save(commit=False)
 
-            subtotal = invoice.items.aggregate(total=Sum('total'))['total'] or 0
-            invoice.subtotal = subtotal
-            vat_rate = invoice.vat or 0
-            vat_amount = (subtotal * vat_rate) / 100
-            invoice.total_due = subtotal + vat_amount
-            invoice.save()
-
-            ActivityLog.objects.create(
-                user=request.user,
-                action=f"Invoice {invoice.invoice_no} Updated"
-            )
+            from invoices.services import InvoiceService
+            invoice = InvoiceService.update_invoice(invoice, items, user=request.user)
 
             messages.success(request, f"Invoice {invoice.invoice_no} updated successfully.")
             return redirect('invoice_detail', pk=invoice.pk)
