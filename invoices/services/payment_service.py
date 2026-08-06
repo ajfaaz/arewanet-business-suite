@@ -22,12 +22,7 @@ class PaymentService:
         )
 
         # Re-evaluate invoice paid totals & status
-        total_paid = sum(p.amount for p in invoice.payments.all())
-        if total_paid >= invoice.total_due:
-            invoice.status = 'PAID'
-        elif total_paid > 0:
-            invoice.status = 'PARTIAL'
-        invoice.save()
+        invoice.update_status()
 
         if user:
             AuditService.log(

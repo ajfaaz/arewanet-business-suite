@@ -1,0 +1,141 @@
+{% extends "invoices/base.html" %}
+{% load currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 d-print-none">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-file-contract text-primary me-2"></i>Account Statement
+            </h2>
+            <p class="text-muted mb-0">Customer: <strong>{{ customer.company_name }}</strong></p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Customer
+            </a>
+            <button onclick="window.print()" class="btn btn-outline-dark">
+                <i class="fas fa-print me-1"></i>Print
+            </button>
+            <a href="{% url 'customer_statement_pdf' customer.pk %}?start_date={{ start_date }}&end_date={{ end_date }}" target="_blank" class="btn btn-primary fw-bold">
+                <i class="fas fa-file-pdf me-1"></i>Download PDF Statement
+            </a>
+        </div>
+    </div>
+
+    <!-- Date Range Filter Bar -->
+    <div class="abs-card mb-4 d-print-none">
+        <div class="abs-card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label text-xs text-uppercase fw-semibold text-muted mb-1">Start Date</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-xs text-uppercase fw-semibold text-muted mb-1">End Date</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark flex-grow-1"><i class="fas fa-filter me-1"></i>Filter Statement</button>
+                    <a href="{% url 'customer_statement' customer.pk %}" class="btn btn-light"><i class="fas fa-undo"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statement Document Sheet -->
+    <div class="abs-card shadow-sm p-5 mx-auto bg-white" style="max-width: 950px;">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">{{ organization.name|default:"ArewaNet Ventures" }}</h3>
+                <div class="text-muted small">
+                    <div>Phone: {{ organization.phone|default:"09017862785" }}</div>
+                    <div>Email: {{ organization.email|default:"info@arewanetventures.com" }}</div>
+                </div>
+            </div>
+            <div class="text-end">
+                <h2 class="fw-bold text-primary mb-1">CUSTOMER STATEMENT</h2>
+                <div class="text-muted small">Date: {{ statement.generated_at|date:"F d, Y" }}</div>
+            </div>
+        </div>
+
+        <!-- Customer Context Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="p-3 bg-light rounded border">
+                    <span class="text-uppercase text-muted text-xs fw-bold d-block mb-1">Customer Account</span>
+                    <h5 class="fw-bold text-dark mb-1">{{ customer.company_name }}</h5>
+                    <div class="text-muted small">{{ customer.email|default:"" }} &bull; {{ customer.phone|default:"" }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="p-3 bg-light rounded border text-center h-100">
+                    <span class="text-uppercase text-muted text-xs fw-bold d-block mb-1">Opening Balance</span>
+                    <h4 class="fw-bold text-dark mb-0">{{ statement.opening_balance|naira }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="p-3 bg-light rounded border text-center h-100 border-primary">
+                    <span class="text-uppercase text-muted text-xs fw-bold d-block mb-1">Closing Balance</span>
+                    <h4 class="fw-bold text-primary mb-0">{{ statement.closing_balance|naira }}</h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Ledger Table -->
+        <div class="table-responsive mb-4">
+            <table class="table table-striped table-bordered align-middle text-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 100px;">Date</th>
+                        <th style="width: 130px;">Reference</th>
+                        <th>Description</th>
+                        <th class="text-end" style="width: 120px;">Debit (₦)</th>
+                        <th class="text-end" style="width: 120px;">Credit (₦)</th>
+                        <th class="text-end pe-3" style="width: 130px;">Balance (₦)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Opening Balance Row -->
+                    <tr class="table-secondary fw-semibold">
+                        <td colspan="3" class="ps-3">Opening Balance</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end pe-3">{{ statement.opening_balance|naira }}</td>
+                    </tr>
+                    {% for tx in statement.transactions %}
+                    <tr>
+                        <td>{{ tx.date|date:"Y-m-d" }}</td>
+                        <td class="fw-bold">{{ tx.reference }}</td>
+                        <td>
+                            <span>{{ tx.description }}</span>
+                        </td>
+                        <td class="text-end text-danger">{% if tx.debit %}+{{ tx.debit|naira }}{% else %}-{% endif %}</td>
+                        <td class="text-end text-success">{% if tx.credit %}-{{ tx.credit|naira }}{% else %}-{% endif %}</td>
+                        <td class="text-end pe-3 fw-bold text-dark">{{ tx.running_balance|naira }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No transactions found for this statement period.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold border-top border-2 border-dark">
+                    <tr>
+                        <td colspan="3" class="ps-3">Total Movement / Closing Balance</td>
+                        <td class="text-end text-danger">+{{ statement.total_debits|naira }}</td>
+                        <td class="text-end text-success">-{{ statement.total_credits|naira }}</td>
+                        <td class="text-end pe-3 text-primary fs-6">{{ statement.closing_balance|naira }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="text-center text-muted small mt-4 pt-3 border-top">
+            Statement generated automatically by {{ organization.name|default:"ArewaNet Business Suite" }}.
+        </div>
+    </div>
+</div>
+{% endblock %}

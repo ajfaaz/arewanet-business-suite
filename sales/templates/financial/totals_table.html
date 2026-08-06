@@ -1,0 +1,45 @@
+{% load currency %}
+<div class="row justify-content-end mb-4">
+    <div class="col-md-5 col-lg-4">
+        <table class="table table-borderless text-end">
+            {% if subtotal %}
+            <tr>
+                <td class="text-muted fw-semibold">Subtotal:</td>
+                <td class="fw-bold text-dark">{{ subtotal|naira }}</td>
+            </tr>
+            {% endif %}
+            {% if vat_amount %}
+            <tr>
+                <td class="text-muted fw-semibold">VAT ({{ vat_rate|default:"0" }}%):</td>
+                <td class="fw-bold text-dark">{{ vat_amount|naira }}</td>
+            </tr>
+            {% endif %}
+            {% if credit_notes_total %}
+            <tr>
+                <td class="text-danger fw-semibold">Less Credit Notes:</td>
+                <td class="fw-bold text-danger">-{{ credit_notes_total|naira }}</td>
+            </tr>
+            {% endif %}
+            {% if debit_notes_total %}
+            <tr>
+                <td class="text-primary fw-semibold">Plus Debit Notes:</td>
+                <td class="fw-bold text-primary">+{{ debit_notes_total|naira }}</td>
+            </tr>
+            {% endif %}
+            <tr class="border-top border-2 border-dark">
+                <td class="fs-5 fw-bold text-dark">Total Due:</td>
+                <td class="fs-5 fw-bold text-primary">{{ grand_total|default:total_due|naira }}</td>
+            </tr>
+            {% if total_paid %}
+            <tr>
+                <td class="text-success fw-semibold">Amount Paid:</td>
+                <td class="fw-bold text-success">{{ total_paid|naira }}</td>
+            </tr>
+            <tr class="border-top">
+                <td class="fw-bold text-dark">Balance Due:</td>
+                <td class="fw-bold text-danger fs-5">{{ balance_due|naira }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>

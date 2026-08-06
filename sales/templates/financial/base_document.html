@@ -1,0 +1,42 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <a href="{% block back_url %}{% url 'invoice_list' %}{% endblock %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+        <div class="d-flex gap-2">
+            {% block action_buttons %}
+            <button onclick="window.print()" class="btn btn-outline-dark">
+                <i class="fas fa-print me-1"></i>Print
+            </button>
+            {% if pdf_url %}
+            <a href="{{ pdf_url }}" class="btn btn-primary">
+                <i class="fas fa-file-pdf me-1"></i>Download PDF
+            </a>
+            {% endif %}
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- Master Document Sheet -->
+    <div class="abs-card shadow-sm bg-white p-5 mx-auto" style="max-width: 900px;">
+        {% include "financial/company_header.html" %}
+        {% include "financial/customer_information.html" %}
+        
+        {% block document_body %}
+        {% include "financial/items_table.html" %}
+        {% include "financial/totals_table.html" %}
+        {% endblock %}
+        
+        {% block payment_section %}
+        {% include "financial/payment_information.html" %}
+        {% endblock %}
+        
+        {% include "financial/signatures.html" %}
+        {% include "financial/footer.html" %}
+    </div>
+</div>
+{% endblock %}

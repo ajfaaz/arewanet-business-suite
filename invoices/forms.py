@@ -1,5 +1,5 @@
 from django import forms
-from .models import Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product
+from .models import Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product, Quotation, QuotationItem
 from django.forms import inlineformset_factory
 
 class InvoiceForm(forms.ModelForm):
@@ -110,6 +110,78 @@ InvoiceItemFormSet = inlineformset_factory(
     Invoice,
     InvoiceItem,
     form=InvoiceItemForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class QuotationForm(forms.ModelForm):
+    class Meta:
+        model = Quotation
+        fields = [
+            'customer',
+            'quotation_date',
+            'valid_until',
+            'status',
+            'vat',
+            'discount',
+            'notes',
+            'terms',
+        ]
+        widgets = {
+            'customer': forms.Select(attrs={'class': 'form-select'}),
+            'quotation_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'valid_until': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'vat': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'terms': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        organization = kwargs.pop('organization', None)
+        super().__init__(*args, **kwargs)
+        if organization:
+            self.fields['customer'].queryset = Customer.objects.filter(organization=organization)
+        else:
+            self.fields['customer'].queryset = Customer.objects.all()
+        self.fields['customer'].empty_label = "Select Customer"
+
+
+class QuotationItemForm(forms.ModelForm):
+    class Meta:
+        model = QuotationItem
+        fields = [
+            'product',
+            'description',
+            'qty',
+            'unit_price',
+            'discount',
+        ]
+        widgets = {
+            'product': forms.Select(attrs={'class': 'form-select product-select'}),
+            'description': forms.TextInput(attrs={'class': 'form-control description'}),
+            'qty': forms.NumberInput(attrs={'class': 'form-control qty'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control unit-price'}),
+            'discount': forms.NumberInput(attrs={'class': 'form-control discount'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        organization = kwargs.pop('organization', None)
+        super().__init__(*args, **kwargs)
+        if organization:
+            self.fields['product'].queryset = Product.objects.filter(
+                organization=organization,
+                active=True
+            )
+        self.fields['product'].empty_label = "-- Select Product --"
+
+
+QuotationItemFormSet = inlineformset_factory(
+    Quotation,
+    QuotationItem,
+    form=QuotationItemForm,
     extra=1,
     can_delete=True,
 )

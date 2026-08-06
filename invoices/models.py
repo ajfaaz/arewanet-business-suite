@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Sum
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .utils import generate_document_number
 import uuid
+from core.choices import QuotationStatus
 
 class Organization(models.Model):
 
@@ -357,28 +358,58 @@ class Invoice(models.Model):
         return (sub * rate) / Decimal('100')
 
     @property
+    def total_paid(self):
+        direct_paid = self.payments.exclude(status__in=['REVERSED', 'REFUNDED', 'FAILED']).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        legacy_paid = self.legacy_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        allocated_paid = self.payment_allocations.exclude(payment__status__in=['REVERSED', 'REFUNDED', 'FAILED']).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        return direct_paid + legacy_paid + allocated_paid
+
+    @property
     def amount_paid(self):
-        result = self.payments.aggregate(total=Sum('amount'))['total']
-        return result if result is not None else Decimal('0')
+        return self.total_paid
+
+    @property
+    def total_credit_notes(self):
+        if not hasattr(self, 'credit_notes'):
+            return Decimal('0.00')
+        return self.credit_notes.exclude(status='CANCELLED').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    @property
+    def total_debit_notes(self):
+        if not hasattr(self, 'debit_notes'):
+            return Decimal('0.00')
+        return self.debit_notes.exclude(status='CANCELLED').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    @property
+    def effective_total_due(self):
+        base_due = self.total_due or Decimal('0.00')
+        return max(Decimal('0.00'), base_due + self.total_debit_notes - self.total_credit_notes)
 
     @property
     def balance(self):
-        return (self.total_due or Decimal('0')) - self.amount_paid
+        return max(Decimal('0.00'), self.effective_total_due - self.total_paid)
+
+    @property
+    def balance_due(self):
+        return self.balance
 
     @property
     def payment_percentage(self):
-        total = float(self.total_due or 0)
+        total = float(self.effective_total_due or 0)
         if total == 0:
             return 0.0
-        paid = float(self.amount_paid)
+        paid = float(self.total_paid)
         return round((paid / total) * 100, 2)
 
     def update_status(self):
-        paid = self.amount_paid
-        due = self.total_due or Decimal('0')
+        paid = self.total_paid
+        due = self.effective_total_due
 
         if paid <= 0:
-            new_status = 'UNPAID'
+            if self.due_date and self.due_date < date.today() and self.status not in ['DRAFT', 'CANCELLED']:
+                new_status = 'OVERDUE'
+            else:
+                new_status = 'UNPAID'
         elif paid < due:
             new_status = 'PARTIAL'
         else:
@@ -461,37 +492,105 @@ class InvoiceItem(models.Model):
         return f"{self.invoice.invoice_no}"
 
 class Quotation(models.Model):
-
-    quote_no = models.CharField(
-        max_length=50
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
     )
-
+    quotation_no = models.CharField(
+        max_length=50,
+        unique=True
+    )
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE
     )
-
+    quotation_date = models.DateField(default=date.today)
+    valid_until = models.DateField(null=True, blank=True)
+    subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    vat = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    discount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
     total = models.DecimalField(
         max_digits=12,
-        decimal_places=2
+        decimal_places=2,
+        default=0
     )
-
     status = models.CharField(
         max_length=20,
-        default='PENDING'
+        choices=QuotationStatus.choices,
+        default=QuotationStatus.DRAFT
     )
+    notes = models.TextField(blank=True)
+    terms = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        if not self.quote_no:
-            self.quote_no = generate_document_number(
+        if not self.quotation_no:
+            self.quotation_no = generate_document_number(
                 Quotation,
-                "quote_no",
+                "quotation_no",
                 "QTN",
             )
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.quote_no
+        return self.quotation_no
+
+
+class QuotationItem(models.Model):
+    quotation = models.ForeignKey(
+        Quotation,
+        related_name="items",
+        on_delete=models.CASCADE
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    description = models.TextField()
+    qty = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+    unit_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    discount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    def save(self, *args, **kwargs):
+        self.total = (Decimal(str(self.qty or 0)) * Decimal(str(self.unit_price or 0))) - Decimal(str(self.discount or 0))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.quotation.quotation_no} - {self.description[:20]}"
 
 class Payment(models.Model):
 
@@ -514,7 +613,7 @@ class Payment(models.Model):
     invoice = models.ForeignKey(
         Invoice,
         on_delete=models.CASCADE,
-        related_name='payments'
+        related_name='legacy_payments'
     )
 
     reference = models.CharField(

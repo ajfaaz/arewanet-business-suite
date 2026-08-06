@@ -1,0 +1,16 @@
+<div class="card bg-light border-0 mb-4">
+    <div class="card-body p-3">
+        <h6 class="fw-bold text-primary mb-2"><i class="fas fa-university me-2"></i>Payment Instructions</h6>
+        <div class="row g-2 text-muted small">
+            <div class="col-sm-4">
+                <strong>Bank Name:</strong> {{ organization.bank_name|default:"GTBank" }}
+            </div>
+            <div class="col-sm-4">
+                <strong>Account Name:</strong> {{ organization.account_name|default:organization.name }}
+            </div>
+            <div class="col-sm-4">
+                <strong>Account Number:</strong> <span class="fw-bold text-dark">{{ organization.account_number|default:"[Account Number]" }}</span>
+            </div>
+        </div>
+    </div>
+</div>

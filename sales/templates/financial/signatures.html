@@ -1,0 +1,20 @@
+{% load static %}
+<div class="row align-items-end mt-4 pt-3 border-top">
+    <div class="col-6">
+        {% if organization.stamp %}
+        <img src="{{ organization.stamp.url }}" alt="Company Stamp" style="max-height: 70px;" class="mb-2">
+        {% endif %}
+        <div class="text-muted small">Company Stamp</div>
+    </div>
+    <div class="col-6 text-end">
+        {% if organization.signature %}
+        <img src="{{ organization.signature.url }}" alt="Authorized Signature" style="max-height: 45px;" class="mb-2">
+        {% else %}
+        <div style="height: 45px;"></div>
+        {% endif %}
+        <div class="border-top border-dark d-inline-block pt-1 px-4">
+            <strong class="text-dark small d-block">Authorized Signature</strong>
+            <span class="text-muted text-xs">{{ organization.name }}</span>
+        </div>
+    </div>
+</div>

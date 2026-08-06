@@ -1,0 +1,73 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    {% url 'quotation_create' as create_url %}
+    {% include "components/layout/page_header.html" with title="Quotations" subtitle="Manage client cost estimations and proposal offers" button_text="New Quotation" button_url=create_url button_icon="plus-circle" %}
+
+    <div class="abs-card mb-4">
+        <div class="abs-card-body py-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="fw-semibold text-muted me-2">Status Filter:</span>
+                <a href="?status=all" class="btn btn-sm {% if current_status == 'ALL' or current_status == 'all' %}btn-primary{% else %}btn-light{% endif %}">All</a>
+                <a href="?status=draft" class="btn btn-sm {% if current_status == 'DRAFT' %}btn-secondary{% else %}btn-light{% endif %}">Draft</a>
+                <a href="?status=sent" class="btn btn-sm {% if current_status == 'SENT' %}btn-info text-white{% else %}btn-light{% endif %}">Sent</a>
+                <a href="?status=approved" class="btn btn-sm {% if current_status == 'APPROVED' %}btn-success{% else %}btn-light{% endif %}">Approved</a>
+                <a href="?status=converted" class="btn btn-sm {% if current_status == 'CONVERTED' %}btn-dark{% else %}btn-light{% endif %}">Converted</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="abs-card">
+        <div class="table-responsive">
+            <table class="abs-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Quotation #</th>
+                        <th>Customer</th>
+                        <th>Quotation Date</th>
+                        <th>Valid Until</th>
+                        <th class="text-end">Total Amount</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for quotation in quotations %}
+                    <tr>
+                        <td class="ps-4 fw-bold">
+                            <a href="{% url 'quotation_detail' quotation.id %}" class="text-decoration-none text-dark">
+                                {{ quotation.quotation_no }}
+                            </a>
+                        </td>
+                        <td>{{ quotation.customer.company_name }}</td>
+                        <td>{{ quotation.quotation_date|date:"M d, Y" }}</td>
+                        <td>{{ quotation.valid_until|date:"M d, Y"|default:"-" }}</td>
+                        <td class="text-end fw-semibold">{{ quotation.total|naira }}</td>
+                        <td class="text-center">
+                            <span class="abs-badge abs-badge-{% if quotation.status == 'APPROVED' %}success{% elif quotation.status == 'CONVERTED' %}secondary{% elif quotation.status == 'SENT' %}info{% else %}warning{% endif %}">
+                                {{ quotation.status }}
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'quotation_detail' quotation.id %}" class="btn btn-outline-primary btn-sm me-1">View</a>
+                            {% if quotation.status != 'CONVERTED' %}
+                            <a href="{% url 'quotation_convert' quotation.id %}" class="btn btn-success btn-sm me-1" onclick="return confirm('Convert this quotation to an Invoice?');">Convert</a>
+                            {% endif %}
+                            <a href="{% url 'quotation_print' quotation.id %}" target="_blank" class="btn btn-outline-dark btn-sm">Print</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            {% include "components/empty/empty_state.html" with title="No Quotations Yet" message="Create your first quotation estimate for a client." button_text="Create Quotation" button_url=create_url %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% load currency %}
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold" id="receivePaymentModalLabel">
+        <i class="fas fa-cash-register me-2"></i>Receive Payment
+        {% if invoice %}- Invoice #{{ invoice.invoice_no }}{% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form method="POST" action="{% if invoice %}{% url 'receive_invoice_payment' invoice.pk %}{% else %}{% url 'receive_payment' %}{% endif %}?modal=1">
+    {% csrf_token %}
+    <div class="modal-body p-4">
+        {% if invoice %}
+        <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <small class="text-muted d-block">Customer</small>
+                <strong>{{ invoice.customer.company_name }}</strong>
+            </div>
+            <div class="text-end">
+                <small class="text-muted d-block">Outstanding Balance</small>
+                <span class="fw-bold text-primary fs-5">{{ invoice.balance_due|naira }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Customer</label>
+                {{ form.customer }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Amount (₦)</label>
+                {{ form.amount }}
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Payment Method</label>
+                {{ form.payment_method }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Payment Date</label>
+                {{ form.payment_date }}
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Reference / Teller #</label>
+            {{ form.reference }}
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label fw-semibold">Notes</label>
+            {{ form.notes }}
+        </div>
+    </div>
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary fw-bold px-4">
+            <i class="fas fa-check-circle me-1"></i>Save Payment
+        </button>
+    </div>
+</form>

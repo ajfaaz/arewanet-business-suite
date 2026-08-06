@@ -7,6 +7,8 @@ class DocumentNumberService:
         "quotation": "QTN",
         "receipt": "RCT",
         "purchase": "PO",
+        "credit_note": "CN",
+        "debit_note": "DN",
     }
 
     @classmethod

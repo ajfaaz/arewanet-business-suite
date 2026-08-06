@@ -1,0 +1,31 @@
+<div class="card bg-light border-0 mb-4">
+    <div class="card-body p-3">
+        <div class="row">
+            <div class="col-md-6">
+                <span class="text-uppercase text-muted text-xs fw-bold d-block mb-1">Customer / Billed To</span>
+                <h5 class="fw-bold text-dark mb-1">{{ customer.company_name }}</h5>
+                {% if customer.contact_person %}<div class="text-muted small">Attn: {{ customer.contact_person }}</div>{% endif %}
+                {% if customer.email %}<div class="text-muted small"><i class="fas fa-envelope me-1"></i>{{ customer.email }}</div>{% endif %}
+                {% if customer.phone %}<div class="text-muted small"><i class="fas fa-phone me-1"></i>{{ customer.phone }}</div>{% endif %}
+                {% if customer.address %}<div class="text-muted small mt-1">{{ customer.address|linebreaksbr }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                {% block document_dates %}
+                <div class="text-muted small mb-1">
+                    <span class="fw-semibold">Issue Date:</span> {{ issue_date|date:"F d, Y"|default:doc_date }}
+                </div>
+                {% if due_date %}
+                <div class="text-muted small mb-1">
+                    <span class="fw-semibold">Due Date:</span> {{ due_date|date:"F d, Y" }}
+                </div>
+                {% endif %}
+                {% if status_display %}
+                <div class="mt-2">
+                    <span class="badge bg-primary fs-6">{{ status_display }}</span>
+                </div>
+                {% endif %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>

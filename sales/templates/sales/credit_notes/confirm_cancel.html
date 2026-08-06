@@ -1,0 +1,28 @@
+{% extends "invoices/base.html" %}
+{% load currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="abs-card border-danger">
+                <div class="abs-card-header bg-danger text-white fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Credit Note Cancellation
+                </div>
+                <div class="abs-card-body p-4">
+                    <p class="mb-3">Are you sure you want to cancel Credit Note <strong>{{ credit_note.credit_note_no }}</strong> of <strong>{{ credit_note.amount|naira }}</strong>?</p>
+                    <p class="text-muted small">Cancelling this Credit Note will restore the reduced balance on Invoice <strong>#{{ credit_note.invoice.invoice_no }}</strong>.</p>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'credit_note_detail' credit_note.pk %}" class="btn btn-light">Cancel</a>
+                            <button type="submit" class="btn btn-danger fw-bold">Confirm Cancellation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

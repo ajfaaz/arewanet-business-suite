@@ -1,0 +1,92 @@
+{% extends "invoices/base.html" %}
+{% load currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="fas fa-file-invoice-dollar text-danger me-2"></i>Credit Notes</h2>
+            <p class="text-muted mb-0">Manage customer returns and balance reduction notes</p>
+        </div>
+        <a href="{% url 'credit_note_create' %}" class="btn btn-danger fw-bold shadow-sm">
+            <i class="fas fa-plus-circle me-1"></i>Issue Credit Note
+        </a>
+    </div>
+
+    <div class="abs-card mb-4">
+        <div class="abs-card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label text-xs text-uppercase fw-semibold text-muted mb-1">Search</label>
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="CN Number, Invoice #, Customer, Reason...">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-xs text-uppercase fw-semibold text-muted mb-1">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="ISSUED" {% if selected_status == 'ISSUED' %}selected{% endif %}>Issued</option>
+                        <option value="APPLIED" {% if selected_status == 'APPLIED' %}selected{% endif %}>Applied</option>
+                        <option value="CANCELLED" {% if selected_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark flex-grow-1"><i class="fas fa-filter me-1"></i>Filter</button>
+                    <a href="{% url 'credit_note_list' %}" class="btn btn-light"><i class="fas fa-undo"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="abs-card">
+        <div class="table-responsive">
+            <table class="abs-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Credit Note #</th>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Reason</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cn in credit_notes %}
+                    <tr>
+                        <td class="ps-4 fw-bold">
+                            <a href="{% url 'credit_note_detail' cn.pk %}" class="text-decoration-none text-dark">
+                                {{ cn.credit_note_no }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'invoice_detail' cn.invoice.pk %}" class="text-decoration-none fw-semibold">
+                                {{ cn.invoice.invoice_no }}
+                            </a>
+                        </td>
+                        <td>{{ cn.customer.company_name }}</td>
+                        <td>{{ cn.created_at|date:"M d, Y" }}</td>
+                        <td><small class="text-muted">{{ cn.reason|truncatechars:40 }}</small></td>
+                        <td class="text-end fw-bold text-danger">{{ cn.amount|naira }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if cn.status == 'ISSUED' %}bg-primary{% elif cn.status == 'APPLIED' %}bg-success{% else %}bg-secondary{% endif %} px-2 py-1">
+                                {{ cn.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'credit_note_detail' cn.pk %}" class="btn btn-sm btn-outline-primary me-1">View</a>
+                            <a href="{% url 'credit_note_pdf' cn.pk %}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="fas fa-file-pdf me-1"></i>PDF</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">No credit notes found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

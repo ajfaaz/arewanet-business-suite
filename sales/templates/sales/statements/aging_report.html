@@ -1,0 +1,110 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-clock text-warning me-2"></i>Accounts Receivable Aging Report
+            </h2>
+            <p class="text-muted mb-0">Management breakdown of outstanding customer balances by overdue duration</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-outline-dark d-print-none">
+            <i class="fas fa-print me-1"></i>Print Report
+        </button>
+    </div>
+
+    <!-- Summary Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-success h-100">
+                <div class="abs-card-body p-3">
+                    <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">Current (0 - 30 Days)</span>
+                    <h3 class="fw-bold text-success mb-0">{{ aging.current|naira }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-warning h-100">
+                <div class="abs-card-body p-3">
+                    <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">31 - 60 Days Overdue</span>
+                    <h3 class="fw-bold text-warning mb-0">{{ aging.thirty_days|naira }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-danger h-100">
+                <div class="abs-card-body p-3">
+                    <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">61 - 90 Days Overdue</span>
+                    <h3 class="fw-bold text-danger mb-0">{{ aging.sixty_days|naira }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-dark h-100">
+                <div class="abs-card-body p-3">
+                    <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">90+ Days Overdue</span>
+                    <h3 class="fw-bold text-dark mb-0">{{ aging.ninety_days|naira }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Breakdown Table -->
+    <div class="abs-card">
+        <div class="abs-card-header fw-bold text-dark d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-users me-2 text-primary"></i>Customer Receivables Aging Breakdown</span>
+            <span class="badge bg-primary fs-6">Total Outstanding: {{ aging.total_outstanding|naira }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="abs-table align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Customer</th>
+                        <th class="text-center">Active Invoices</th>
+                        <th class="text-end text-success">Current (0-30d)</th>
+                        <th class="text-end text-warning">31-60 Days</th>
+                        <th class="text-end text-danger">61-90 Days</th>
+                        <th class="text-end text-dark">90+ Days</th>
+                        <th class="text-end pe-4">Total Outstanding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in aging.customer_breakdown %}
+                    <tr>
+                        <td class="ps-4 fw-bold">
+                            <a href="{% url 'customer_statement' item.customer.pk %}" class="text-decoration-none text-dark">
+                                {{ item.customer.company_name }}
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark fw-bold">{{ item.invoice_count }}</span>
+                        </td>
+                        <td class="text-end fw-semibold text-success">{{ item.current|naira }}</td>
+                        <td class="text-end fw-semibold text-warning">{{ item.thirty_days|naira }}</td>
+                        <td class="text-end fw-semibold text-danger">{{ item.sixty_days|naira }}</td>
+                        <td class="text-end fw-semibold text-dark">{{ item.ninety_days|naira }}</td>
+                        <td class="text-end pe-4 fw-bold text-primary fs-6">{{ item.total|naira }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">No outstanding customer balances found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold border-top border-2 border-dark">
+                    <tr>
+                        <td class="ps-4" colspan="2">Organization Total</td>
+                        <td class="text-end text-success">{{ aging.current|naira }}</td>
+                        <td class="text-end text-warning">{{ aging.thirty_days|naira }}</td>
+                        <td class="text-end text-danger">{{ aging.sixty_days|naira }}</td>
+                        <td class="text-end text-dark">{{ aging.ninety_days|naira }}</td>
+                        <td class="text-end pe-4 text-primary fs-5">{{ aging.total_outstanding|naira }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

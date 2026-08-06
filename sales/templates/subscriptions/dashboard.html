@@ -1,0 +1,118 @@
+{% extends "invoices/base.html" %}
+{% load currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-chart-pie text-primary me-2"></i>SaaS & Subscription Analytics
+            </h2>
+            <p class="text-muted mb-0">Real-time SaaS performance metrics, MRR/ARR breakdown & renewal forecast</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'subscription_forecast' %}" class="btn btn-outline-success fw-bold">
+                <i class="fas fa-chart-line me-1"></i>3-Month Revenue Forecast
+            </a>
+            <a href="{% url 'subscription_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-1"></i>All Subscriptions
+            </a>
+        </div>
+    </div>
+
+    <!-- Core SaaS Metrics Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-primary h-100 p-3">
+                <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">Monthly Recurring Revenue (MRR)</span>
+                <h2 class="fw-bold text-primary mb-0">{{ metrics.mrr|naira }}</h2>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-success h-100 p-3">
+                <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">Annual Recurring Revenue (ARR)</span>
+                <h2 class="fw-bold text-success mb-0">{{ metrics.arr|naira }}</h2>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-info h-100 p-3">
+                <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">Active Subscriptions</span>
+                <h2 class="fw-bold text-info mb-0">{{ metrics.active_count }}</h2>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="abs-card border-start border-4 border-warning h-100 p-3">
+                <span class="text-muted text-uppercase text-xs fw-bold d-block mb-1">Renewals This Month</span>
+                <h2 class="fw-bold text-warning mb-0">{{ metrics.renewals_this_month }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Forecast Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="abs-card">
+                <div class="abs-card-header fw-bold text-dark d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-calendar-alt me-2 text-primary"></i>Upcoming 3-Month Expected Revenue Forecast</span>
+                    <a href="{% url 'subscription_forecast' %}" class="small text-primary text-decoration-none fw-bold">Detailed Forecast Report</a>
+                </div>
+                <div class="abs-card-body p-4">
+                    <div class="row g-3">
+                        {% for f in forecast %}
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded border border-2 border-primary text-center">
+                                <span class="text-uppercase text-muted text-xs fw-bold d-block mb-1">{{ f.month_name }}</span>
+                                <h3 class="fw-bold text-primary mb-2">{{ f.projected_amount|naira }}</h3>
+                                <span class="badge bg-primary fs-6">{{ f.renewals|length }} Renewals</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Active Subscriptions -->
+    <div class="abs-card">
+        <div class="abs-card-header fw-bold text-dark">
+            <i class="fas fa-sync me-2 text-primary"></i>Recent Active Subscriptions
+        </div>
+        <div class="table-responsive">
+            <table class="abs-table align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Title</th>
+                        <th>Customer</th>
+                        <th>Billing Cycle</th>
+                        <th>Next Billing Date</th>
+                        <th class="text-end">Billing Total</th>
+                        <th class="text-end pe-4">MRR Contribution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in recent_subscriptions %}
+                    <tr>
+                        <td class="ps-4 fw-bold">
+                            <a href="{% url 'subscription_detail' sub.pk %}" class="text-decoration-none text-dark">
+                                {{ sub.title }}
+                            </a>
+                        </td>
+                        <td>{{ sub.customer.company_name }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ sub.get_billing_cycle_display }}</span></td>
+                        <td class="fw-semibold text-dark">{{ sub.next_invoice_date|date:"M d, Y" }}</td>
+                        <td class="text-end fw-bold text-dark">{{ sub.total_amount|naira }}</td>
+                        <td class="text-end pe-4 fw-bold text-success">{{ sub.mrr|naira }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No active subscriptions.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

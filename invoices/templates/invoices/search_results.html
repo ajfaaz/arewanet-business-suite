@@ -1,0 +1,75 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    {% include "components/layout/page_header.html" with title="Search Results" subtitle="Query: '"|add:query|add:"'" %}
+
+    {% if total_results == 0 %}
+        {% include "components/empty/empty_state.html" with title="No Results Found" message="No matching invoices, customers, products, or payments were found." %}
+    {% else %}
+        {% if invoices %}
+        <div class="abs-card mb-4">
+            <div class="abs-card-header fw-bold text-dark"><i class="bi bi-file-earmark-text me-2"></i>Invoices</div>
+            <div class="abs-card-body p-0">
+                <table class="abs-table mb-0">
+                    <thead><tr><th>Invoice No</th><th>Customer</th><th>Amount</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr>
+                            <td class="fw-bold">{{ inv.invoice_no }}</td>
+                            <td>{{ inv.customer.company_name }}</td>
+                            <td>{{ inv.total_due|naira }}</td>
+                            <td><a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if customers %}
+        <div class="abs-card mb-4">
+            <div class="abs-card-header fw-bold text-dark"><i class="bi bi-people me-2"></i>Customers</div>
+            <div class="abs-card-body p-0">
+                <table class="abs-table mb-0">
+                    <thead><tr><th>Company Name</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for cust in customers %}
+                        <tr>
+                            <td class="fw-bold">{{ cust.company_name }}</td>
+                            <td>{{ cust.email }}</td>
+                            <td>{{ cust.phone }}</td>
+                            <td><a href="{% url 'customer_detail' cust.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if products %}
+        <div class="abs-card mb-4">
+            <div class="abs-card-header fw-bold text-dark"><i class="fas fa-box me-2"></i>Products & Services</div>
+            <div class="abs-card-body p-0">
+                <table class="abs-table mb-0">
+                    <thead><tr><th>Name</th><th>SKU</th><th>Price</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for prod in products %}
+                        <tr>
+                            <td class="fw-bold">{{ prod.name }}</td>
+                            <td>{{ prod.sku }}</td>
+                            <td>{{ prod.selling_price|naira }}</td>
+                            <td><a href="{% url 'product_detail' prod.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

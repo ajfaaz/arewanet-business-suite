@@ -4,3 +4,7 @@ class NotificationService:
         """Service to handle user notifications across sales workflows."""
         # Future notification implementation (email/in-app alert/SMS)
         pass
+
+    @classmethod
+    def send_inapp_notification(cls, user, title, message):
+        return cls.send_notification(user, title, message)

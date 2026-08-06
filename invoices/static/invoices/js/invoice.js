@@ -1,3 +1,8 @@
+if (window.InvoiceJSInitialized) {
+    // Already initialized, do not register listeners again
+} else {
+window.InvoiceJSInitialized = true;
+
 function calculateRow(row) {
     const qtyInput = row.querySelector(".qty, .line-qty");
     const priceInput = row.querySelector(".unit-price, .line-price");
@@ -16,7 +21,9 @@ function calculateRow(row) {
 function calculateInvoiceTotal() {
     let subtotal = 0;
     document.querySelectorAll(".invoice-row").forEach(function (row) {
-        subtotal += calculateRow(row);
+        if (row.style.display !== "none" && !row.classList.contains("d-none")) {
+            subtotal += calculateRow(row);
+        }
     });
 
     const subtotalEl = document.getElementById("subtotal");
@@ -88,9 +95,12 @@ document.addEventListener("input", function (e) {
 document.addEventListener("DOMContentLoaded", function () {
     calculateInvoiceTotal();
 
-    const addRowBtn = document.getElementById("add-row");
-    if (addRowBtn) {
-        addRowBtn.addEventListener("click", function () {
+    // Consolidated global click handler for Add Item & Remove Item to prevent double-firing
+    document.addEventListener("click", function (e) {
+        const addBtn = e.target.closest("#add-row");
+        if (addBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             const tbody = document.getElementById("invoice-items-body");
             const template = document.getElementById("empty-form-template");
             const totalFormsInput = document.getElementById("id_items-TOTAL_FORMS");
@@ -102,17 +112,38 @@ document.addEventListener("DOMContentLoaded", function () {
                 totalFormsInput.value = count + 1;
                 calculateInvoiceTotal();
             }
-        });
-    }
+            return;
+        }
 
-    document.addEventListener("click", function (e) {
-        if (e.target.classList.contains("remove-row")) {
-            const row = e.target.closest("tr");
-            const tbody = document.getElementById("invoice-items-body");
-            if (tbody && tbody.querySelectorAll("tr").length > 1) {
+        const removeBtn = e.target.closest(".remove-row");
+        if (removeBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const row = removeBtn.closest("tr");
+            if (!row) return;
+
+            const deleteCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            const idInput = row.querySelector('input[type="hidden"][name$="-id"]');
+
+            if (idInput && idInput.value) {
+                // Existing DB item: set DELETE flag and hide row
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                } else {
+                    const nameAttr = idInput.name.replace(/-id$/, "-DELETE");
+                    const hiddenDelete = document.createElement("input");
+                    hiddenDelete.type = "hidden";
+                    hiddenDelete.name = nameAttr;
+                    hiddenDelete.value = "on";
+                    row.appendChild(hiddenDelete);
+                }
+                row.style.display = "none";
+                row.classList.add("d-none");
+            } else {
+                // Unsaved new row: remove from DOM
                 row.remove();
-                calculateInvoiceTotal();
             }
+            calculateInvoiceTotal();
         }
     });
 
@@ -133,3 +164,4 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+}

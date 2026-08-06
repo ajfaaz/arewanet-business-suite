@@ -1,0 +1,132 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Payment Transactions</h2>
+            <p class="text-muted mb-0">Search and filter recorded payment transactions</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'multi_invoice_payment' %}" class="btn btn-outline-primary fw-semibold">
+                <i class="fas fa-layer-group me-1"></i>Multi-Invoice Payment
+            </a>
+            <a href="{% url 'receive_payment' %}" class="btn btn-primary fw-bold">
+                <i class="fas fa-plus-circle me-1"></i>Receive Payment
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters & Search Bar -->
+    <div class="abs-card mb-4">
+        <div class="abs-card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-xs text-uppercase text-muted mb-1">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="q" value="{{ search_query|default:'' }}" class="form-control border-start-0" placeholder="Receipt #, Customer, Reference...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-xs text-uppercase text-muted mb-1">Payment Method</label>
+                    <select name="method" class="form-select">
+                        <option value="">All Methods</option>
+                        <option value="CASH" {% if selected_method == 'CASH' %}selected{% endif %}>Cash</option>
+                        <option value="BANK" {% if selected_method == 'BANK' %}selected{% endif %}>Bank Transfer</option>
+                        <option value="POS" {% if selected_method == 'POS' %}selected{% endif %}>POS</option>
+                        <option value="CHEQUE" {% if selected_method == 'CHEQUE' %}selected{% endif %}>Cheque</option>
+                        <option value="ONLINE" {% if selected_method == 'ONLINE' %}selected{% endif %}>Online Payment</option>
+                        <option value="MOBILE" {% if selected_method == 'MOBILE' %}selected{% endif %}>Mobile Money</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-xs text-uppercase text-muted mb-1">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="COMPLETED" {% if selected_status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                        <option value="REVERSED" {% if selected_status == 'REVERSED' %}selected{% endif %}>Reversed</option>
+                        <option value="REFUNDED" {% if selected_status == 'REFUNDED' %}selected{% endif %}>Refunded</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark flex-grow-1"><i class="fas fa-filter me-1"></i>Filter</button>
+                    <a href="{% url 'payment_list' %}" class="btn btn-light"><i class="fas fa-undo"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="abs-card">
+        <div class="table-responsive">
+            <table class="abs-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Receipt #</th>
+                        <th>Customer</th>
+                        <th>Invoice / Allocation</th>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td class="ps-4 fw-bold">
+                            <a href="{% url 'payment_detail' p.pk %}" class="text-decoration-none text-dark">
+                                {{ p.receipt_number }}
+                            </a>
+                        </td>
+                        <td class="fw-semibold">{{ p.customer.company_name }}</td>
+                        <td>
+                            {% if p.invoice %}
+                            <a href="{% url 'invoice_detail' p.invoice.pk %}" class="text-decoration-none">
+                                {{ p.invoice.invoice_no }}
+                            </a>
+                            {% elif p.allocations.exists %}
+                            <span class="badge bg-light text-dark fw-semibold" title="Allocated across {{ p.allocations.count }} invoices">
+                                <i class="fas fa-layer-group me-1 text-primary"></i>Multi-Invoice ({{ p.allocations.count }})
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.payment_date|date:"M d, Y" }}</td>
+                        <td>
+                            <span class="badge bg-secondary px-2 py-1">
+                                {{ p.get_payment_method_display }}
+                            </span>
+                        </td>
+                        <td><small class="text-muted">{{ p.reference|default:"-" }}</small></td>
+                        <td class="text-end fw-bold text-success">{{ p.amount|naira }}</td>
+                        <td class="text-center">
+                            <span class="abs-badge abs-badge-{% if p.status == 'COMPLETED' %}success{% elif p.status == 'REVERSED' %}danger{% else %}warning{% endif %}">
+                                {{ p.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'payment_detail' p.pk %}" class="btn btn-outline-primary btn-sm me-1">View</a>
+                            <a href="{% url 'receipt_view' p.pk %}" target="_blank" class="btn btn-outline-dark btn-sm"><i class="fas fa-print me-1"></i>Receipt</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="fas fa-receipt fa-2x mb-3 text-secondary d-block"></i>
+                            No payment transactions match your query.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,8 +2,10 @@
 function updateInvoiceSummary() {
     let subtotal = 0;
     document.querySelectorAll('.invoice-row').forEach(row => {
-        if (typeof calculateRowTotal === 'function') {
-            subtotal += calculateRowTotal(row);
+        if (row.style.display !== 'none' && !row.classList.contains('d-none')) {
+            if (typeof calculateRowTotal === 'function') {
+                subtotal += calculateRowTotal(row);
+            }
         }
     });
 

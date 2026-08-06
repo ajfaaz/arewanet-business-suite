@@ -1,0 +1,94 @@
+{% extends "sales/base_sales.html" %}
+{% load static %}
+
+{% block sales_content %}
+
+{% url 'quotation_list' as quotation_list_url %}
+{% include "components/layout/page_header.html" with title="Create Quotation" subtitle="Generate a formal cost estimation proposal" button_text="Back" button_url=quotation_list_url button_icon="arrow-left" %}
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="abs-card mb-4">
+                <div class="abs-card-header">Quotation Information</div>
+                <div class="abs-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Customer</label>
+                            {{ form.customer }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Quotation Date</label>
+                            {{ form.quotation_date }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Valid Until</label>
+                            {{ form.valid_until }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Status</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">VAT Rate (%)</label>
+                            {{ form.vat }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Discount Amount</label>
+                            {{ form.discount }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="abs-card mb-4">
+                <div class="abs-card-header">Proposal Line Items</div>
+                <div class="abs-card-body">
+                    {{ formset.management_form }}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">Product / Service</th>
+                                    <th>Description</th>
+                                    <th style="width: 12%;">Qty</th>
+                                    <th style="width: 18%;">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item_form in formset %}
+                                <tr>
+                                    <td>{{ item_form.product }}</td>
+                                    <td>{{ item_form.description }}</td>
+                                    <td>{{ item_form.qty }}</td>
+                                    <td>{{ item_form.unit_price }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="abs-card mb-4">
+                <div class="abs-card-header">Actions</div>
+                <div class="abs-card-body d-grid gap-2">
+                    <button type="submit" class="abs-btn abs-btn-primary">Save Quotation</button>
+                    <a href="{{ quotation_list_url }}" class="abs-btn abs-btn-outline">Cancel</a>
+                </div>
+            </div>
+
+            <div class="abs-card mb-4">
+                <div class="abs-card-header">Terms & Conditions</div>
+                <div class="abs-card-body">
+                    {{ form.terms }}
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

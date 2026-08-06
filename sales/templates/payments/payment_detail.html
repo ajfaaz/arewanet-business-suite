@@ -1,0 +1,142 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Payment {{ payment.receipt_number }}</h2>
+            <span class="abs-badge abs-badge-{% if payment.status == 'COMPLETED' %}success{% elif payment.status == 'REVERSED' %}danger{% else %}warning{% endif %} me-2">
+                {{ payment.get_status_display }}
+            </span>
+            <span class="badge bg-secondary px-2 py-1">{{ payment.get_payment_method_display }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'receipt_view' payment.pk %}" target="_blank" class="btn btn-dark fw-bold">
+                <i class="fas fa-print me-1"></i>Print Receipt
+            </a>
+            {% if payment.status == 'COMPLETED' %}
+            <a href="{% url 'payment_reverse' payment.pk %}" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-undo me-1"></i>Reverse Payment
+            </a>
+            {% endif %}
+            <a href="{% url 'payment_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Details Card -->
+        <div class="col-lg-6">
+            <div class="abs-card h-100">
+                <div class="abs-card-header fw-bold text-dark">
+                    <i class="fas fa-info-circle me-2 text-primary"></i>Payment Details
+                </div>
+                <div class="abs-card-body">
+                    <table class="table table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted w-50">Receipt Number:</td>
+                                <td class="fw-bold text-dark">{{ payment.receipt_number }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Customer:</td>
+                                <td class="fw-bold">{{ payment.customer.company_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Amount Paid:</td>
+                                <td class="fw-bold text-success fs-5">{{ payment.amount|naira }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Payment Date:</td>
+                                <td>{{ payment.payment_date|date:"F d, Y" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Payment Method:</td>
+                                <td><span class="badge bg-light text-dark fw-bold border">{{ payment.get_payment_method_display }}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Reference / Teller #:</td>
+                                <td>{{ payment.reference|default:"None" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Recorded By:</td>
+                                <td>{{ payment.created_by.username|default:"System Admin" }}</td>
+                            </tr>
+                            {% if payment.notes %}
+                            <tr>
+                                <td class="text-muted">Notes:</td>
+                                <td><small class="text-muted">{{ payment.notes|linebreaksbr }}</small></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Target Invoice / Multi-Invoice Allocations Card -->
+        <div class="col-lg-6">
+            <div class="abs-card h-100">
+                <div class="abs-card-header fw-bold text-dark">
+                    <i class="fas fa-file-invoice-dollar me-2 text-primary"></i>Invoice Settlement Allocations
+                </div>
+                <div class="abs-card-body p-0">
+                    {% if payment.invoice_id %}
+                    <div class="p-4 border-bottom">
+                        <small class="text-muted text-uppercase text-xs fw-bold d-block mb-1">Direct Settlement Invoice</small>
+                        <h4 class="fw-bold mb-1">
+                            <a href="{% url 'invoice_detail' payment.invoice_id %}" class="text-decoration-none text-dark">
+                                Invoice #{{ payment.invoice.invoice_no }}
+                            </a>
+                        </h4>
+                        <p class="text-muted small mb-2">Total Due: {{ payment.invoice.total_due|naira }} | Balance Remaining: {{ payment.invoice.balance_due|naira }}</p>
+                        <span class="abs-badge abs-badge-{% if payment.invoice.status == 'PAID' %}success{% elif payment.invoice.status == 'PARTIAL' %}info{% else %}warning{% endif %}">
+                            {{ payment.invoice.get_status_display }}
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    {% if payment.allocations.exists %}
+                    <table class="abs-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Invoice #</th>
+                                <th class="text-end">Allocated Amount</th>
+                                <th class="text-center pe-4">Current Invoice Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alloc in payment.allocations.all %}
+                            <tr>
+                                <td class="ps-4 fw-bold">
+                                    {% if alloc.invoice_id %}
+                                    <a href="{% url 'invoice_detail' alloc.invoice_id %}" class="text-decoration-none text-dark">
+                                        {{ alloc.invoice.invoice_no }}
+                                    </a>
+                                    {% else %}
+                                    <span>{{ alloc.invoice.invoice_no|default:"Invoice" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold text-success">{{ alloc.amount|naira }}</td>
+                                <td class="text-center pe-4">
+                                    <span class="abs-badge abs-badge-{% if alloc.invoice.status == 'PAID' %}success{% elif alloc.invoice.status == 'PARTIAL' %}info{% else %}warning{% endif %}">
+                                        {{ alloc.invoice.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% elif not payment.invoice %}
+                    <div class="p-4 text-center text-muted">
+                        No direct invoice or multi-invoice allocation attached.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

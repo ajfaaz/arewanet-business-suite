@@ -8,11 +8,14 @@
         <p class="text-muted small mb-0">Customer Profile & Account Financial Overview</p>
     </div>
 
-    <div>
-        <a href="{% url 'customer_update' customer.id %}" class="btn btn-warning me-2">
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'customer_statement' customer.id %}" class="btn btn-primary fw-bold">
+            <i class="fas fa-file-contract me-1"></i>Account Statement
+        </a>
+        <a href="{% url 'customer_update' customer.id %}" class="btn btn-warning">
             Edit Customer
         </a>
-        <a href="{% url 'customer_history' customer.id %}" class="btn btn-info text-white me-2">
+        <a href="{% url 'customer_history' customer.id %}" class="btn btn-info text-white">
             Billing History
         </a>
         <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary">
@@ -81,6 +84,56 @@
                     <h3 class="fw-bold mb-0 text-danger">{{ outstanding|naira }}</h3>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Subscriptions Section -->
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-sync text-primary me-2"></i>Active Subscriptions</h5>
+        <a href="{% url 'subscription_create' %}?customer={{ customer.id }}" class="btn btn-sm btn-primary fw-bold">
+            <i class="fas fa-plus me-1"></i>Add Subscription
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 ps-4">Subscription Title</th>
+                        <th class="py-3">Billing Cycle</th>
+                        <th class="py-3">Next Invoice Date</th>
+                        <th class="py-3 text-end">Billing Amount</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th class="py-3 text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in customer.subscriptions.all %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-dark">{{ sub.title }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ sub.get_billing_cycle_display }}</span></td>
+                        <td class="fw-semibold text-dark">{{ sub.next_invoice_date|date:"M d, Y" }}</td>
+                        <td class="text-end fw-bold text-dark">{{ sub.total_amount|naira }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if sub.status == 'ACTIVE' %}bg-success{% elif sub.status == 'PAUSED' %}bg-warning text-dark{% else %}bg-danger{% endif %} px-3 py-2 rounded-pill">
+                                {{ sub.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'subscription_detail' sub.pk %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted small">No subscriptions recorded for this customer.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

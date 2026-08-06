@@ -4,11 +4,11 @@
         <span>ArewaNet ABS</span>
     </div>
     <ul class="abs-sidebar-nav">
-        <li class="nav-item text-uppercase text-muted small px-3 mt-2 fw-bold" style="font-size: 0.7rem;">Sales</li>
+        <li class="nav-item text-uppercase px-3 mt-2 fw-bold" style="color: #38bdf8; font-size: 0.75rem; letter-spacing: 1px;">Sales</li>
         <li><a href="{% url 'dashboard' %}" class="abs-sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
         <li><a href="{% url 'invoice_list' %}" class="abs-sidebar-link {% if 'invoice' in request.resolver_match.url_name %}active{% endif %}"><i class="fas fa-file-invoice"></i> Invoices</a></li>
         <li><a href="#" class="abs-sidebar-link {% if 'quotation' in request.resolver_match.url_name %}active{% endif %}"><i class="fas fa-file-signature"></i> Quotations</a></li>
-        <li><a href="{% url 'payment_list' %}" class="abs-sidebar-link {% if 'payment' in request.resolver_match.url_name %}active{% endif %}"><i class="fas fa-cash-register"></i> Payments</a></li>
+        <li><a href="{% url 'payment_dashboard' %}" class="abs-sidebar-link {% if 'payment' in request.resolver_match.url_name %}active{% endif %}"><i class="fas fa-cash-register"></i> Payment Center</a></li>
         <li><a href="{% url 'customer_list' %}" class="abs-sidebar-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><i class="fas fa-users"></i> Customers</a></li>
         <li><a href="{% url 'product_list' %}" class="abs-sidebar-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}"><i class="fas fa-box"></i> Products</a></li>
         <li><a href="#" class="abs-sidebar-link"><i class="fas fa-chart-line"></i> Reports</a></li>

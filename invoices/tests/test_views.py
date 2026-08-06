@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from invoices.forms import InvoiceForm
 from invoices.models import Invoice, Customer, Organization, InvoiceItem
+from sales.payments.models import Payment
 
 
 class InvoiceFormTest(TestCase):
@@ -201,7 +202,7 @@ class InvoiceViewsTest(TestCase):
 
     def test_payment_workflow_auto_status_and_receipt(self):
         from decimal import Decimal
-        from invoices.models import Payment, Receipt
+        from sales.payments.models import Payment
 
         self.invoice.total_due = Decimal('100000.00')
         self.invoice.status = 'UNPAID'
@@ -246,7 +247,7 @@ class InvoiceViewsTest(TestCase):
 
     def test_payment_crud_operations(self):
         from decimal import Decimal
-        from invoices.models import Payment, Receipt
+        from sales.payments.models import Payment
 
         self.invoice.total_due = Decimal('50000.00')
         self.invoice.save()

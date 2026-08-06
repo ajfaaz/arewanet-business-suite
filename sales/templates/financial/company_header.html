@@ -1,0 +1,24 @@
+{% load static %}
+<div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+    <div>
+        {% if organization.logo %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 65px; width: auto;" class="mb-2">
+        {% else %}
+        <h2 class="fw-bold text-dark mb-1">{{ organization.name|default:"ArewaNet Ventures" }}</h2>
+        {% endif %}
+        <div class="text-muted small">
+            <div><i class="fas fa-phone me-1 text-primary"></i>{{ organization.phone|default:"09017862785" }}</div>
+            <div><i class="fas fa-envelope me-1 text-primary"></i>{{ organization.email|default:"info@arewanetventures.com" }}</div>
+            {% if organization.website %}<div><i class="fas fa-globe me-1 text-primary"></i>{{ organization.website }}</div>{% endif %}
+            {% if organization.address %}<div><i class="fas fa-map-marker-alt me-1 text-primary"></i>{{ organization.address }}</div>{% endif %}
+        </div>
+    </div>
+    <div class="text-end">
+        <h1 class="display-6 fw-bold text-primary mb-1">{% block document_title %}{{ doc_title|default:"FINANCIAL DOCUMENT" }}{% endblock %}</h1>
+        {% block header_metadata %}
+        <div class="badge bg-light text-dark fs-6 border px-3 py-2">
+            <strong>#{{ doc_number }}</strong>
+        </div>
+        {% endblock %}
+    </div>
+</div>

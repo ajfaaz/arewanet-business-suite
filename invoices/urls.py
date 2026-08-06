@@ -1,6 +1,8 @@
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
+from sales.payments import views as sales_payment_views
+from sales import views as sales_views
 
 urlpatterns = [
 
@@ -20,6 +22,12 @@ urlpatterns = [
         '',
         views.dashboard,
         name='dashboard'
+    ),
+
+    path(
+        'search/',
+        views.global_search,
+        name='global_search'
     ),
 
     path(
@@ -82,48 +90,22 @@ urlpatterns = [
         name='invoice_delete'
     ),
 
-    # Payments CRUD
-    path(
-        "payments/",
-        views.payment_list,
-        name="payment_list",
-    ),
-
-    path(
-        "payments/create/<int:invoice_id>/",
-        views.payment_create,
-        name="payment_create",
-    ),
-
-    path(
-        "payments/<int:pk>/",
-        views.payment_detail,
-        name="payment_detail",
-    ),
-
-    path(
-        "payments/<int:pk>/edit/",
-        views.payment_update,
-        name="payment_update",
-    ),
-
-    path(
-        "payments/<int:pk>/delete/",
-        views.payment_delete,
-        name="payment_delete",
-    ),
-
-    path(
-        "receipt/<int:pk>/",
-        views.receipt_detail,
-        name="receipt_detail",
-    ),
-
-    path(
-        "receipt/<int:pk>/print/",
-        views.receipt_print,
-        name="receipt_print",
-    ),
+    # Payments & Enterprise Payment Center
+    path("payments/", sales_payment_views.payment_dashboard, name="payment_dashboard"),
+    path("payments/list/", sales_payment_views.payment_list, name="payment_list"),
+    path("payments/receive/", sales_payment_views.receive_payment, name="receive_payment"),
+    path("payments/create/<int:invoice_id>/", sales_payment_views.receive_payment, name="payment_create"),
+    path("payments/receive/invoice/<int:invoice_id>/", sales_payment_views.receive_payment, name="receive_invoice_payment"),
+    path("payments/multi-invoice/", sales_payment_views.multi_invoice_payment, name="multi_invoice_payment"),
+    path("payments/<str:pk>/", sales_payment_views.payment_detail, name="payment_detail"),
+    path("payments/<str:pk>/receipt/", sales_payment_views.receipt_view, name="receipt_view"),
+    path("payments/<str:pk>/reverse/", sales_payment_views.payment_reverse, name="payment_reverse"),
+    path("payments/<str:pk>/refund/", sales_payment_views.payment_refund, name="payment_refund"),
+    path("payments/<str:pk>/edit/", views.payment_update, name="payment_update"),
+    path("payments/<str:pk>/delete/", views.payment_delete, name="payment_delete"),
+    path("payments/<int:pk>/", views.payment_detail, name="legacy_payment_detail"),
+    path("receipt/<int:pk>/", views.receipt_detail, name="receipt_detail"),
+    path("receipt/<str:pk>/print/", sales_payment_views.receipt_view, name="receipt_print"),
 
     path(
         'quotation/<int:pk>/convert/',
@@ -181,4 +163,35 @@ urlpatterns = [
         name='customer_detail'
     ),
 
+    # Quotations CRUD
+    path('quotations/', views.quotation_list, name='quotation_list'),
+    path('quotation/create/', views.quotation_create, name='quotation_create'),
+    path('quotation/<int:pk>/', views.quotation_detail, name='quotation_detail'),
+    path('quotation/<int:pk>/print/', views.quotation_print, name='quotation_print'),
+    path('quotation/<int:pk>/convert/', views.quotation_convert, name='quotation_convert'),
+    path('quotation/<int:pk>/delete/', views.quotation_delete, name='quotation_delete'),
+
+    # Credit Notes
+    path('credit-notes/', sales_views.credit_note_list, name='credit_note_list'),
+    path('credit-notes/create/', sales_views.credit_note_create, name='credit_note_create'),
+    path('credit-notes/create/<int:invoice_id>/', sales_views.credit_note_create, name='credit_note_create_invoice'),
+    path('credit-notes/<str:pk>/', sales_views.credit_note_detail, name='credit_note_detail'),
+    path('credit-notes/<str:pk>/pdf/', sales_views.credit_note_pdf, name='credit_note_pdf'),
+    path('credit-notes/<str:pk>/cancel/', sales_views.credit_note_cancel, name='credit_note_cancel'),
+
+    # Debit Notes
+    path('debit-notes/', sales_views.debit_note_list, name='debit_note_list'),
+    path('debit-notes/create/', sales_views.debit_note_create, name='debit_note_create'),
+    path('debit-notes/create/<int:invoice_id>/', sales_views.debit_note_create, name='debit_note_create_invoice'),
+    path('debit-notes/<str:pk>/', sales_views.debit_note_detail, name='debit_note_detail'),
+    path('debit-notes/<str:pk>/pdf/', sales_views.debit_note_pdf, name='debit_note_pdf'),
+    path('debit-notes/<str:pk>/cancel/', sales_views.debit_note_cancel, name='debit_note_cancel'),
+
+    # Statements & Aging Reports
+    path('customers/<int:customer_id>/statement/', sales_views.customer_statement_view, name='customer_statement'),
+    path('customers/<int:customer_id>/statement/pdf/', sales_views.customer_statement_pdf, name='customer_statement_pdf'),
+    path('reports/aging/', sales_views.aging_report_view, name='aging_report'),
+
+    # Subscriptions & Recurring Billing
+    path('subscriptions/', include('sales.subscriptions.urls')),
 ]

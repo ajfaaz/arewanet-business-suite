@@ -60,6 +60,16 @@
             background-color: #0284c7;
         }
 
+        .sidebar .sidebar-heading {
+            color: #38bdf8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 12px 24px 6px 24px;
+            display: block;
+        }
+
         .main-content {
             margin-left: 260px;
             padding: 40px;
@@ -79,7 +89,7 @@
 
             <ul class="nav flex-column mt-3 flex-grow-1">
                 <li class="nav-item">
-                    <small class="text-uppercase text-muted px-3 fw-bold">
+                    <small class="sidebar-heading">
                         Sales
                     </small>
                 </li>
@@ -96,9 +106,29 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'payment_list' %}"
+                    <a href="{% url 'payment_dashboard' %}"
                         class="nav-link {% if 'payment' in request.resolver_match.url_name or 'receipt' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-cash-stack"></i> Payments
+                        <i class="bi bi-cash-stack"></i> Payment Center
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'credit_note_list' %}" class="nav-link {% if 'credit_note' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-file-invoice-dollar text-danger"></i> Credit Notes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'debit_note_list' %}" class="nav-link {% if 'debit_note' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-file-invoice-dollar text-info"></i> Debit Notes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'aging_report' %}" class="nav-link {% if 'aging' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-clock text-warning"></i> Aging Report
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'subscription_list' %}" class="nav-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-sync text-primary"></i> Subscriptions
                     </a>
                 </li>
                 <li class="nav-item">

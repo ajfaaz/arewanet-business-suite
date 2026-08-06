@@ -1,0 +1,43 @@
+{% extends "invoices/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold text-dark mb-0">Create Subscription Template</h2>
+                    <p class="text-muted small mb-0">Define pre-configured package pricing and billing cycles</p>
+                </div>
+                <a href="{% url 'subscription_template_list' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+            </div>
+
+            <div class="abs-card shadow-sm">
+                <div class="abs-card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Template Title <span class="text-danger">*</span></label>
+                            {{ form.title }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Default Billing Cycle <span class="text-danger">*</span></label>
+                            {{ form.billing_cycle }}
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Package Scope / Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'subscription_template_list' %}" class="btn btn-light">Cancel</a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4">
+                                <i class="fas fa-check-circle me-1"></i>Save Template
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

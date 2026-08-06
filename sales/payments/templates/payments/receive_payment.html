@@ -1,0 +1,91 @@
+{% extends "invoices/base.html" %}
+{% load static currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold text-dark mb-0">Record Payment</h2>
+                    <p class="text-muted small mb-0">
+                        {% if invoice %}
+                        Receiving payment for Invoice <strong>{{ invoice.invoice_no }}</strong> (Balance: {{ invoice.balance_due|naira }})
+                        {% else %}
+                        Receive payment settlement from a customer
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% if invoice %}{% url 'invoice_detail' invoice.pk %}{% else %}{% url 'payment_list' %}{% endif %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+
+            <div class="abs-card shadow-sm">
+                <div class="abs-card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        {% if invoice %}
+                        <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <strong>Invoice #{{ invoice.invoice_no }}</strong> &bull; {{ invoice.customer.company_name }}<br>
+                                <small>Total Amount: {{ invoice.total_due|naira }} | Amount Paid: {{ invoice.total_paid|naira }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-muted text-xs text-uppercase d-block">Outstanding Balance</span>
+                                <h4 class="fw-bold text-primary mb-0">{{ invoice.balance_due|naira }}</h4>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                                {{ form.customer }}
+                                {% if form.customer.errors %}<div class="text-danger text-xs mt-1">{{ form.customer.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Amount (₦) <span class="text-danger">*</span></label>
+                                {{ form.amount }}
+                                {% if form.amount.errors %}<div class="text-danger text-xs mt-1">{{ form.amount.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                                {{ form.payment_method }}
+                                {% if form.payment_method.errors %}<div class="text-danger text-xs mt-1">{{ form.payment_method.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Payment Date <span class="text-danger">*</span></label>
+                                {{ form.payment_date }}
+                                {% if form.payment_date.errors %}<div class="text-danger text-xs mt-1">{{ form.payment_date.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Transaction Reference / Teller Number</label>
+                            {{ form.reference }}
+                            <small class="text-muted">e.g. Bank transfer reference number, POS transaction ID, or Cheque number</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Notes</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% if invoice %}{% url 'invoice_detail' invoice.pk %}{% else %}{% url 'payment_list' %}{% endif %}" class="btn btn-light">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold">
+                                <i class="fas fa-check-circle me-1"></i>Save Payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

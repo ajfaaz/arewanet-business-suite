@@ -93,7 +93,7 @@ class InvoiceService:
 
     @classmethod
     @transaction.atomic
-    def update_invoice(cls, invoice, items, user=None):
+    def update_invoice(cls, invoice, items, user=None, deleted_items=None):
         """
         Atomically update an existing invoice and its line items.
         """
@@ -107,12 +107,23 @@ class InvoiceService:
         invoice.total_due = total_due
         invoice.save()
 
+        saved_item_ids = []
         for item in items:
             item.invoice = invoice
             line_qty = getattr(item, 'qty', 0)
             line_price = getattr(item, 'unit_price', Decimal("0.00"))
             item.total = Decimal(str(line_qty)) * Decimal(str(line_price))
             item.save()
+            if item.pk:
+                saved_item_ids.append(item.pk)
+
+        if deleted_items:
+            for d_item in deleted_items:
+                if d_item.pk:
+                    d_item.delete()
+
+        # Delete any items belonging to this invoice that were removed/deleted
+        invoice.items.exclude(pk__in=saved_item_ids).delete()
 
         if user:
             AuditService.log(

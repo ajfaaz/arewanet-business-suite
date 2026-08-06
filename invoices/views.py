@@ -9,7 +9,7 @@ from django.core.mail import EmailMessage
 from django.contrib import messages
 
 from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product
-from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm
+from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm, QuotationForm, QuotationItemFormSet
 from .utils.pdf_generator import generate_invoice_pdf
 
 
@@ -37,43 +37,31 @@ def _check_permission(user, allowed_roles):
 @login_required
 def dashboard(request):
     org = _get_user_organization(request.user)
-    invoices = Invoice.objects.filter(organization=org)
-    customers = Customer.objects.filter(organization=org)
-    payments = Payment.objects.filter(organization=org)
+    from sales.services.dashboard_service import DashboardService
+    context = DashboardService.statistics(organization=org)
 
-    # Financial KPIs
-    paid_inv_total = invoices.filter(status='PAID').aggregate(total=Sum('total_due'))['total'] or 0
-    pay_total = payments.aggregate(total=Sum('amount'))['total'] or 0
-    total_revenue = max(paid_inv_total, pay_total)
-
-    # Calculate total outstanding balance
-    unpaid_or_partial_invoices = invoices.exclude(status='PAID').exclude(status='CANCELLED')
-    outstanding = sum(inv.balance for inv in unpaid_or_partial_invoices)
-
-    payments_today = payments.filter(
-        payment_date=date.today()
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    total_invoices_count = invoices.count()
-
-    context = {
-        'total_revenue': total_revenue,
-        'outstanding': outstanding,
-        'payments_today': payments_today,
-        'total_invoices': total_invoices_count,
-        'customer_count': customers.count(),
-        'paid_count': invoices.filter(status='PAID').count(),
-        'unpaid_count': invoices.filter(status='UNPAID').count(),
-        'paid': invoices.filter(status='PAID').count(),
-        'unpaid': invoices.filter(status='UNPAID').count(),
-        'revenue': total_revenue,
-    }
+    # Context keys for template compatibility
+    context['revenue'] = context['revenue_month']
+    context['outstanding'] = context['outstanding_balance']
+    context['customer_count'] = context['total_customers']
+    context['paid'] = context['paid_invoices_count']
+    context['unpaid'] = context['unpaid_invoices_count']
 
     return render(
         request,
         'invoices/dashboard.html',
         context
     )
+
+
+@login_required
+def global_search(request):
+    org = _get_user_organization(request.user)
+    query = request.GET.get('q', '')
+    from sales.services.search_service import SearchService
+    results = SearchService.global_search(query, organization=org)
+    results['query'] = query
+    return render(request, 'invoices/search_results.html', results)
 
 
 @login_required
@@ -108,13 +96,17 @@ def invoice_detail(request, pk):
     items = invoice.items.all()
     organization = _get_organization(invoice)
 
+    from sales.payments.selectors import PaymentSelectors
+    timeline_events = PaymentSelectors.get_payments_for_timeline(invoice)
+
     return render(
         request,
         'invoices/invoice_detail.html',
         {
             'invoice': invoice,
             'items': items,
-            'organization': organization
+            'organization': organization,
+            'timeline_events': timeline_events,
         }
     )
 
@@ -286,16 +278,34 @@ def payment_detail(request, pk):
 def payment_update(request, pk):
     _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
     org = _get_user_organization(request.user)
-    payment = get_object_or_404(Payment, pk=pk, organization=org)
+    from sales.payments.models import Payment as EnterprisePayment
+    import uuid as uuid_lib
+
+    is_valid_uuid = False
+    try:
+        uuid_lib.UUID(str(pk))
+        is_valid_uuid = True
+    except (ValueError, TypeError):
+        pass
+
+    payment = None
+    if is_valid_uuid:
+        payment = EnterprisePayment.objects.filter(organization=org, uuid=pk).first()
+    elif str(pk).isdigit():
+        payment = EnterprisePayment.objects.filter(organization=org, id=int(pk)).first()
+
+    if not payment:
+        payment = get_object_or_404(Payment, pk=pk, organization=org)
 
     form = PaymentForm(request.POST or None, instance=payment)
 
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            payment.invoice.update_status()
+            if hasattr(payment, 'invoice') and payment.invoice:
+                payment.invoice.update_status()
             messages.success(request, "Payment updated successfully.")
-            return redirect("payment_detail", payment.pk)
+            return redirect("payment_detail", pk=payment.pk)
 
     return render(
         request,
@@ -303,7 +313,7 @@ def payment_update(request, pk):
         {
             "form": form,
             "payment": payment,
-            "invoice": payment.invoice,
+            "invoice": getattr(payment, 'invoice', None),
             "is_edit": True,
         },
     )
@@ -313,13 +323,31 @@ def payment_update(request, pk):
 def payment_delete(request, pk):
     _check_permission(request.user, ['OWNER', 'ADMIN'])
     org = _get_user_organization(request.user)
-    payment = get_object_or_404(Payment, pk=pk, organization=org)
+    from sales.payments.models import Payment as EnterprisePayment
+    import uuid as uuid_lib
+
+    is_valid_uuid = False
+    try:
+        uuid_lib.UUID(str(pk))
+        is_valid_uuid = True
+    except (ValueError, TypeError):
+        pass
+
+    payment = None
+    if is_valid_uuid:
+        payment = EnterprisePayment.objects.filter(organization=org, uuid=pk).first()
+    elif str(pk).isdigit():
+        payment = EnterprisePayment.objects.filter(organization=org, id=int(pk)).first()
+
+    if not payment:
+        payment = get_object_or_404(Payment, pk=pk, organization=org)
 
     if request.method == 'POST':
-        invoice = payment.invoice
-        ref = payment.reference
+        invoice = getattr(payment, 'invoice', None)
+        ref = getattr(payment, 'reference', getattr(payment, 'receipt_number', ''))
         payment.delete()
-        invoice.update_status()
+        if invoice:
+            invoice.update_status()
         messages.success(request, "Payment deleted successfully.")
         ActivityLog.objects.create(
             user=request.user,
@@ -435,7 +463,7 @@ def invoice_update(request, pk):
             items = formset.save(commit=False)
 
             from invoices.services import InvoiceService
-            invoice = InvoiceService.update_invoice(invoice, items, user=request.user)
+            invoice = InvoiceService.update_invoice(invoice, items, user=request.user, deleted_items=formset.deleted_objects)
 
             messages.success(request, f"Invoice {invoice.invoice_no} updated successfully.")
             return redirect('invoice_detail', pk=invoice.pk)
@@ -932,4 +960,118 @@ def product_delete(request, pk):
         request,
         "products/product_confirm_delete.html",
         {"object": product, "type": "Product"}
+    )
+
+
+@login_required
+def quotation_list(request):
+    org = _get_user_organization(request.user)
+    status_filter = request.GET.get('status', 'all').upper()
+    quotations = Quotation.objects.filter(organization=org).order_by('-id')
+
+    if status_filter in ['DRAFT', 'SENT', 'APPROVED', 'REJECTED', 'EXPIRED', 'CONVERTED']:
+        quotations = quotations.filter(status=status_filter)
+
+    return render(
+        request,
+        'quotations/quotation_list.html',
+        {
+            'quotations': quotations,
+            'current_status': status_filter
+        }
+    )
+
+
+@login_required
+def quotation_create(request):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+
+    if request.method == 'POST':
+        form = QuotationForm(request.POST, organization=org)
+        formset = QuotationItemFormSet(request.POST, prefix='items', form_kwargs={'organization': org})
+
+        if form.is_valid() and formset.is_valid():
+            quotation = form.save(commit=False)
+            quotation.organization = org
+            items = formset.save(commit=False)
+
+            from sales.services.quotation_service import QuotationService
+            quotation = QuotationService.create(quotation, items, user=request.user)
+
+            messages.success(request, f"Quotation {quotation.quotation_no} created successfully.")
+            return redirect('quotation_detail', pk=quotation.pk)
+    else:
+        form = QuotationForm(organization=org)
+        formset = QuotationItemFormSet(prefix='items', form_kwargs={'organization': org})
+
+    return render(
+        request,
+        'quotations/quotation_form.html',
+        {
+            'form': form,
+            'formset': formset,
+            'is_edit': False
+        }
+    )
+
+
+@login_required
+def quotation_detail(request, pk):
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+    return render(
+        request,
+        'quotations/quotation_detail.html',
+        {
+            'quotation': quotation,
+            'items': quotation.items.all()
+        }
+    )
+
+
+@login_required
+def quotation_print(request, pk):
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+    return render(
+        request,
+        'quotations/quotation_print.html',
+        {
+            'quotation': quotation,
+            'items': quotation.items.all(),
+            'organization': org
+        }
+    )
+
+
+@login_required
+def quotation_convert(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+
+    from sales.services.quotation_service import QuotationService
+    invoice = QuotationService.convert_to_invoice(quotation, user=request.user)
+
+    messages.success(request, f"Quotation {quotation.quotation_no} converted to Invoice {invoice.invoice_no} successfully!")
+    return redirect('invoice_detail', pk=invoice.pk)
+
+
+@login_required
+def quotation_delete(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN'])
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        no = quotation.quotation_no
+        quotation.delete()
+        messages.success(request, f"Quotation {no} deleted successfully.")
+        return redirect('quotation_list')
+
+    return render(
+        request,
+        'products/product_confirm_delete.html',
+        {'object': quotation, 'type': 'Quotation'}
     )

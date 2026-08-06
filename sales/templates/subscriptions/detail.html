@@ -1,0 +1,187 @@
+{% extends "invoices/base.html" %}
+{% load currency %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">{{ subscription.title }}</h2>
+            <p class="text-muted mb-0">Customer: <strong>{{ subscription.customer.company_name }}</strong></p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'subscription_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+            {% if subscription.status == 'ACTIVE' %}
+            <form method="POST" action="{% url 'subscription_generate_invoice' subscription.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success fw-bold">
+                    <i class="fas fa-bolt me-1"></i>Generate Invoice Now
+                </button>
+            </form>
+            <form method="POST" action="{% url 'subscription_pause' subscription.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning fw-semibold">
+                    <i class="fas fa-pause me-1"></i>Pause
+                </button>
+            </form>
+            <form method="POST" action="{% url 'subscription_cancel' subscription.pk %}" class="d-inline" onsubmit="return confirm('Cancel this subscription?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="fas fa-ban me-1"></i>Cancel
+                </button>
+            </form>
+            {% elif subscription.status == 'PAUSED' %}
+            <form method="POST" action="{% url 'subscription_resume' subscription.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary fw-bold">
+                    <i class="fas fa-play me-1"></i>Resume Subscription
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="abs-card p-3 border-start border-4 border-primary">
+                <span class="text-muted text-xs text-uppercase fw-bold d-block mb-1">Status</span>
+                <span class="badge fs-6 {% if subscription.status == 'ACTIVE' %}bg-success{% elif subscription.status == 'PAUSED' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                    {{ subscription.get_status_display }}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="abs-card p-3 border-start border-4 border-info">
+                <span class="text-muted text-xs text-uppercase fw-bold d-block mb-1">Billing Cycle</span>
+                <h5 class="fw-bold text-dark mb-0">{{ subscription.get_billing_cycle_display }}</h5>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="abs-card p-3 border-start border-4 border-warning">
+                <span class="text-muted text-xs text-uppercase fw-bold d-block mb-1">Next Billing Date</span>
+                <h5 class="fw-bold text-warning mb-0">{{ subscription.next_invoice_date|date:"M d, Y" }}</h5>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="abs-card p-3 border-start border-4 border-success">
+                <span class="text-muted text-xs text-uppercase fw-bold d-block mb-1">MRR Contribution</span>
+                <h5 class="fw-bold text-success mb-0">{{ subscription.mrr|naira }}</h5>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Line Items & Invoices -->
+        <div class="col-lg-8">
+            <!-- Line Items Card -->
+            <div class="abs-card mb-4">
+                <div class="abs-card-header fw-bold text-dark">
+                    <i class="fas fa-list me-2 text-primary"></i>Subscription Line Items
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">S/N</th>
+                                <th>Item Description</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end pe-4">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td class="ps-4 text-muted">{{ forloop.counter }}</td>
+                                <td class="fw-bold text-dark">{{ item.description }}</td>
+                                <td class="text-center">{{ item.qty }}</td>
+                                <td class="text-end">{{ item.unit_price|naira }}</td>
+                                <td class="text-end pe-4 fw-bold text-dark">{{ item.total|naira }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light border-top border-2">
+                            <tr>
+                                <td colspan="4" class="ps-4 fw-bold">Billing Cycle Total</td>
+                                <td class="text-end pe-4 fw-bold text-primary fs-6">{{ subscription.total_amount|naira }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Auto-Generated Invoices History -->
+            <div class="abs-card">
+                <div class="abs-card-header fw-bold text-dark d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-file-invoice me-2 text-primary"></i>Generated Invoices History</span>
+                    <span class="badge bg-light text-dark fw-bold">{{ generated_invoices.count }} Invoices</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Invoice #</th>
+                                <th>Issue Date</th>
+                                <th class="text-end">Amount Due</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-end pe-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in generated_invoices %}
+                            <tr>
+                                <td class="ps-4 fw-bold">
+                                    <a href="{% url 'invoice_detail' inv.pk %}" class="text-decoration-none text-dark">
+                                        {{ inv.invoice_no }}
+                                    </a>
+                                </td>
+                                <td>{{ inv.invoice_date|date:"M d, Y" }}</td>
+                                <td class="text-end fw-bold text-dark">{{ inv.total_due|naira }}</td>
+                                <td class="text-center">
+                                    <span class="badge {% if inv.status == 'PAID' %}bg-success{% elif inv.status == 'UNPAID' %}bg-danger{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                                        {{ inv.status }}
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No invoices generated yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Subscription Timeline & Logs -->
+        <div class="col-lg-4">
+            <div class="abs-card h-100">
+                <div class="abs-card-header fw-bold text-dark">
+                    <i class="fas fa-history me-2 text-primary"></i>Subscription Timeline
+                </div>
+                <div class="abs-card-body p-4">
+                    <div class="timeline border-start border-2 ps-3">
+                        {% for log in logs %}
+                        <div class="mb-4 position-relative">
+                            <div class="position-absolute bg-primary rounded-circle" style="width: 10px; height: 10px; left: -21px; top: 5px;"></div>
+                            <span class="badge bg-light text-dark fw-bold mb-1">{{ log.action }}</span>
+                            <small class="text-muted d-block">{{ log.created_at|date:"M d, Y H:i" }}</small>
+                            <p class="mb-0 text-dark small">{{ log.notes }}</p>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted small">No activity recorded yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

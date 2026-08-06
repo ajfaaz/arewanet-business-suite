@@ -24,8 +24,9 @@
 
                 <tbody id="invoice-items-body">
                     {% for item_form in formset %}
-                    <tr class="invoice-row">
+                    <tr class="invoice-row" {% if item_form.DELETE.value %}style="display:none;"{% endif %}>
                         {{ item_form.id }}
+                        {% if item_form.DELETE %}<div style="display:none;">{{ item_form.DELETE }}</div>{% endif %}
                         <td>{{ item_form.product }}</td>
                         <td>{{ item_form.description }}</td>
                         <td>{{ item_form.qty }}</td>

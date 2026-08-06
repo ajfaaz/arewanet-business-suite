@@ -64,6 +64,10 @@ class Quotation(BaseDocument):
     class Meta:
         ordering = ["-created_at"]
 
+    @property
+    def total_amount(self):
+        return getattr(self, 'total', 0)
+
     def __str__(self):
         return f"Quotation {self.document_number}"
 
@@ -84,37 +88,3 @@ class QuotationItem(BaseLineItem):
         return f"{self.quotation.document_number} - {self.description}"
 
 
-class Payment(models.Model):
-
-    invoice = models.ForeignKey(
-        Invoice,
-        on_delete=models.CASCADE,
-        related_name="payments"
-    )
-
-    amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2
-    )
-
-    payment_date = models.DateField()
-
-    payment_method = models.CharField(
-        max_length=50
-    )
-
-    reference = models.CharField(
-        max_length=255,
-        blank=True
-    )
-
-    notes = models.TextField(
-        blank=True
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-    def __str__(self):
-        return f"Payment ₦{self.amount} for {self.invoice.document_number}"

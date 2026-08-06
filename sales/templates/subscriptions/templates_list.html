@@ -1,0 +1,46 @@
+{% extends "invoices/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-layer-group text-primary me-2"></i>Subscription Templates
+            </h2>
+            <p class="text-muted mb-0">Pre-configured service packages for quick subscription creation</p>
+        </div>
+        <a href="{% url 'subscription_template_create' %}" class="btn btn-primary fw-bold shadow-sm">
+            <i class="fas fa-plus-circle me-1"></i>New Template
+        </a>
+    </div>
+
+    <div class="row g-4">
+        {% for tmpl in templates %}
+        <div class="col-md-6 col-lg-4">
+            <div class="abs-card h-100 shadow-sm border-start border-4 border-primary">
+                <div class="abs-card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="fw-bold text-dark mb-0">{{ tmpl.title }}</h5>
+                            <span class="badge bg-light text-dark border">{{ tmpl.get_billing_cycle_display }}</span>
+                        </div>
+                        <p class="text-muted small mb-3">{{ tmpl.description|default:"No description." }}</p>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <small class="text-muted fw-semibold">{{ tmpl.items.count }} Line Items</small>
+                        <a href="{% url 'subscription_create' %}?template={{ tmpl.pk }}" class="btn btn-sm btn-primary fw-bold">
+                            <i class="fas fa-plus me-1"></i>Use Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5 text-muted">
+            <p class="mb-2">No subscription templates created yet.</p>
+            <a href="{% url 'subscription_template_create' %}" class="btn btn-primary fw-bold">Create First Template</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
