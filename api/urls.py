@@ -16,33 +16,36 @@ from api.views import (
 )
 
 router = DefaultRouter()
-router.register(r'customers', CustomerViewSet, basename='api-customer')
-router.register(r'products', ProductViewSet, basename='api-product')
 router.register(r'categories', ProductCategoryViewSet, basename='api-category')
-router.register(r'quotations', QuotationViewSet, basename='api-quotation')
-router.register(r'invoices', InvoiceViewSet, basename='api-invoice')
-router.register(r'payments', PaymentViewSet, basename='api-payment')
 router.register(r'subscriptions', SubscriptionViewSet, basename='api-subscription')
 
-v1_patterns = [
-    # Auth
-    path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/me/', UserProfileAPIView.as_view(), name='api_user_profile'),
-
-    # Dashboard
-    path('dashboard/', DashboardAPIView.as_view(), name='api_dashboard'),
-
-    # Router endpoints
-    path('', include(router.urls)),
-]
-
 urlpatterns = [
-    # API v1 Versioning
-    path('v1/', include((v1_patterns, 'v1'))),
+    # Auth Module
+    path('auth/', include('api.authentication.urls')),
+
+    # Customers Module
+    path('customers/', include('api.customers.urls')),
+
+    # Products Module
+    path('products/', include('api.products.urls')),
+
+    # Invoices Module
+    path('invoices/', include('api.invoices.urls')),
+
+    # Payments Module
+    path('payments/', include('api.payments.urls')),
+
+    # Quotations Module
+    path('quotations/', include('api.quotations.urls')),
+
+    # Dashboard Module
+    path('dashboard/', include('api.dashboard.urls')),
 
     # OpenAPI Schema & Interactive Docs
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # Router endpoints
+    path('', include(router.urls)),
 ]

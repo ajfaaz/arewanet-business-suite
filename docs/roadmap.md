@@ -1,19 +1,25 @@
-# Product Roadmap
+# ABS ERP Roadmap
 
-## Completed Milestones
-- [x] Sprint 1: Invoice Detail & PDF Engine
-- [x] Sprint 2: Multi-Tenant Organizations & Customer Management
-- [x] Sprint 3: Payments & Financial KPI Dashboard
-- [x] Sprint 4: Products & Services Module
-- [x] Sprint 5.1: Sales Domain Services Architecture
-- [x] Sprint 5.2: BaseDocument Abstract Domain Architecture
-- [x] Sprint 5.3: ABS Design System v1.0 & Modular Component Architecture
-- [x] Sprint 5.4: ABS Component Library (Button, Stat Card, Header, Table, Empty State, Toast, Spinner, Modal, Breadcrumb, Docs)
+## Phase 1 — Core Financials & Sales Engine
+- [x] Customers & Customer 360 Summary
+- [x] Products & Product Categories Catalog
+- [x] Quotations & 1-Click Invoice Conversion
+- [x] Invoices & PDF Document Generation Engine
+- [x] Enterprise Payments & Multi-Channel Allocation
+- [x] Financial Documents (Credit Notes, Debit Notes, Statements, Aging Reports)
+- [x] Subscriptions, SaaS Metrics (MRR/ARR) & Recurring Invoice Automation
+- [x] Enterprise REST API (`/api/v1/`) with OpenAPI & Swagger UI
 
-## Upcoming Milestones
-- [ ] Sprint 5.5: Refactor Invoice Module with ABS Components
-- [ ] Sprint 5.6: Refactor CRM (Customers) with ABS Components
-- [ ] Sprint 5.7: Refactor Products & Categories
-- [ ] Sprint 5.8: Build Reports Center
-- [ ] Sprint 5.9: Build Customer Portal
-- [ ] Sprint 6.0: REST API & Flutter Mobile App Integration
+## Phase 2 — Operations & Core Modules
+- [ ] Inventory & Multi-Warehouse Tracking
+- [ ] Procurement & Purchase Orders
+- [ ] Core Finance & General Ledger
+- [ ] Human Resources (HR) & Payroll
+- [ ] Fixed Assets Management
+- [ ] Project Costing & Milestones
+
+## Phase 3 — Mobility & Intelligence
+- [ ] Flutter Mobile App (iOS & Android)
+- [ ] Customer Self-Service Portal
+- [ ] AI Predictive Revenue & Cashflow Analytics
+- [ ] Multi-Currency & International Tax Engine

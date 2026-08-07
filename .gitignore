@@ -1,20 +1,19 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyo
 
 # Virtual Environment
 venv/
 env/
 .venv/
+.env
+.env.*
 
 # Django
 db.sqlite3
 media/
 staticfiles/
-
-# Environment
-.env
 
 # IDE
 .vscode/
@@ -27,13 +26,11 @@ Thumbs.db
 # Logs
 *.log
 
-# Python cache
+# Coverage & Testing
+.coverage
+htmlcov/
 .pytest_cache/
 .mypy_cache/
 
-# Coverage
-htmlcov/
-.coverage
-
-# Node (if used later)
+# Node
 node_modules/

@@ -34,6 +34,12 @@ class PaymentService:
             payment_date = date.today()
 
         amount_dec = Decimal(str(amount))
+
+        if invoice:
+            remaining = invoice.total_due - (invoice.total_paid or Decimal("0.00"))
+            if amount_dec > remaining:
+                raise ValueError("Payment amount exceeds outstanding invoice balance.")
+
         receipt_no = cls.generate_receipt_number()
 
         payment = Payment.objects.create(

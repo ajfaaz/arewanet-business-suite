@@ -258,6 +258,17 @@ class Product(models.Model):
         auto_now=True
     )
 
+    @property
+    def price(self):
+        return self.selling_price
+
+    @property
+    def is_active(self):
+        return self.active
+
+    def __str__(self):
+        return self.name
+
     class Meta:
         ordering = ["name"]
 
@@ -307,11 +318,15 @@ class Invoice(models.Model):
     due_date = models.DateField()
 
     project_name = models.CharField(
-        max_length=255
+        max_length=255,
+        blank=True,
+        default=""
     )
 
     deployment_phase = models.CharField(
-        max_length=255
+        max_length=255,
+        blank=True,
+        default=""
     )
 
     subtotal = models.DecimalField(

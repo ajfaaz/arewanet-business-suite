@@ -1,4 +1,5 @@
 import io
+from decimal import Decimal
 from datetime import date, datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -41,11 +42,15 @@ def dashboard(request):
     context = DashboardService.statistics(organization=org)
 
     # Context keys for template compatibility
-    context['revenue'] = context['revenue_month']
-    context['outstanding'] = context['outstanding_balance']
-    context['customer_count'] = context['total_customers']
-    context['paid'] = context['paid_invoices_count']
-    context['unpaid'] = context['unpaid_invoices_count']
+    context['total_revenue'] = context.get('total_revenue', Decimal('0.00'))
+    context['revenue'] = context.get('revenue_month', Decimal('0.00'))
+    context['payments_today'] = context.get('payments_today', Decimal('0.00'))
+    context['outstanding'] = context.get('outstanding_balance', Decimal('0.00'))
+    context['customer_count'] = context.get('total_customers', 0)
+    context['paid_count'] = context.get('paid_invoices_count', 0)
+    context['paid'] = context.get('paid_invoices_count', 0)
+    context['unpaid_count'] = context.get('unpaid_invoices_count', 0)
+    context['unpaid'] = context.get('unpaid_invoices_count', 0)
 
     return render(
         request,

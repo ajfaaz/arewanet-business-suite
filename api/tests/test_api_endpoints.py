@@ -37,8 +37,8 @@ class EnterpriseAPITest(TestCase):
             'password': 'apipassword'
         })
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn('access', res.data)
-        access_token = res.data['access']
+        self.assertIn('access', res.data['data'])
+        access_token = res.data['data']['access']
 
         # 2. Access /api/v1/auth/me/ with Bearer token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
