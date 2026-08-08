@@ -7,4 +7,4 @@ class PaymentSelector:
     def list(organization):
         return Payment.objects.filter(
             organization=organization
-        ).select_related("customer", "invoice")
+        ).select_related("invoice", "customer", "organization")

@@ -7,4 +7,4 @@ class QuotationSelector:
     def list(organization):
         return Quotation.objects.filter(
             organization=organization
-        ).select_related("customer").prefetch_related("items")
+        ).select_related("customer", "organization").prefetch_related("items", "items__product")

@@ -25,11 +25,10 @@ class CustomerViewSet(OrganizationModelViewSet):
     permission_classes = [IsOrganizationMember]
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["organization"]
     search_fields = ["company_name", "contact_person", "email", "phone"]
     ordering_fields = ["company_name", "created_at"]
-    ordering = ["company_name"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
         org = _get_user_organization(self.request.user)

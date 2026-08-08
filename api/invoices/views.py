@@ -26,11 +26,10 @@ from core.permissions import IsOrganizationMember
 
 class InvoiceViewSet(OrganizationModelViewSet):
     permission_classes = [IsOrganizationMember]
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status", "customer"]
     search_fields = ["invoice_no", "customer__company_name"]
     ordering_fields = ["invoice_date", "due_date", "total_due"]
-    ordering = ["-created_at"]
+    ordering = ["-invoice_date"]
 
     def get_queryset(self):
         org = _get_user_organization(self.request.user)

@@ -7,4 +7,4 @@ class InvoiceSelector:
     def list(organization):
         return Invoice.objects.filter(
             organization=organization
-        ).select_related("customer").prefetch_related("items")
+        ).select_related("customer", "organization").prefetch_related("items", "items__product")

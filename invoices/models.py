@@ -443,6 +443,14 @@ class Invoice(models.Model):
             )
         super().save(*args, **kwargs)
 
+    class Meta:
+        ordering = ['-invoice_date', '-created_at']
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["organization", "invoice_date"]),
+            models.Index(fields=["organization", "due_date"]),
+        ]
+
     def __str__(self):
         return self.invoice_no
 

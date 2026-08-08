@@ -24,11 +24,10 @@ from core.permissions import IsOrganizationMember
 
 class ProductViewSet(OrganizationModelViewSet):
     permission_classes = [IsOrganizationMember]
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "description", "sku", "barcode"]
+    filterset_fields = ["category"]
+    search_fields = ["name", "sku", "barcode"]
     ordering_fields = ["name", "selling_price", "created_at"]
-    ordering = ["name"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
         org = _get_user_organization(self.request.user)

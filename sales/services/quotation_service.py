@@ -6,6 +6,9 @@ from invoices.models import Quotation, QuotationItem, Invoice, InvoiceItem
 from invoices.utils import generate_document_number
 from invoices.services.audit_service import AuditService
 
+from core.exceptions.business import InvalidQuotationStatus
+
+
 class QuotationService:
 
     @classmethod
@@ -128,6 +131,9 @@ class QuotationService:
         """
         1-Click Conversion: Automatically convert approved quotation into an Invoice.
         """
+        if str(quotation.status) in [QuotationStatus.REJECTED, QuotationStatus.EXPIRED, QuotationStatus.CONVERTED, "REJECTED", "EXPIRED", "CONVERTED"]:
+            raise InvalidQuotationStatus()
+
         quotation_no = getattr(quotation, 'quotation_no', getattr(quotation, 'document_number', ''))
         valid_until = getattr(quotation, 'valid_until', getattr(quotation, 'due_date', None))
         subtotal = getattr(quotation, 'subtotal', getattr(quotation, 'total', Decimal("0.00")))

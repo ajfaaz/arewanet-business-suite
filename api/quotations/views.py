@@ -22,8 +22,7 @@ from core.permissions import IsOrganizationMember
 
 class QuotationViewSet(OrganizationModelViewSet):
     permission_classes = [IsOrganizationMember]
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status", "customer"]
     search_fields = ["quotation_no", "customer__company_name"]
     ordering_fields = ["quotation_date", "valid_until", "total"]
     ordering = ["-created_at"]

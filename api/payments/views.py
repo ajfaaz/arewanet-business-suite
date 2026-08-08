@@ -25,8 +25,7 @@ from core.permissions import IsOrganizationMember
 
 class PaymentViewSet(OrganizationModelViewSet):
     permission_classes = [IsOrganizationMember]
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["payment_method", "status", "invoice", "customer"]
     search_fields = ["receipt_number", "reference", "invoice__invoice_no", "customer__company_name"]
     ordering_fields = ["payment_date", "amount", "created_at"]
     ordering = ["-payment_date", "-created_at"]
@@ -62,12 +61,9 @@ class PaymentViewSet(OrganizationModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            try:
-                payment = self.perform_create(serializer)
-                out_serializer = PaymentDetailSerializer(payment)
-                return success(data=out_serializer.data, message="Payment received successfully.", status_code=status.HTTP_201_CREATED)
-            except Exception as e:
-                return error(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+            payment = self.perform_create(serializer)
+            out_serializer = PaymentDetailSerializer(payment)
+            return success(data=out_serializer.data, message="Payment received successfully.", status_code=status.HTTP_201_CREATED)
         return error(errors=serializer.errors, message="Validation failed.", status_code=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, *args, **kwargs):

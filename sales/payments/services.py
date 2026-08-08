@@ -9,6 +9,9 @@ from invoices.utils import generate_document_number
 from invoices.services.audit_service import AuditService
 
 
+from core.exceptions.business import InvoiceAlreadyPaid, PaymentExceedsBalance
+
+
 class PaymentService:
 
     @classmethod
@@ -37,8 +40,10 @@ class PaymentService:
 
         if invoice:
             remaining = invoice.total_due - (invoice.total_paid or Decimal("0.00"))
+            if remaining <= 0:
+                raise InvoiceAlreadyPaid()
             if amount_dec > remaining:
-                raise ValueError("Payment amount exceeds outstanding invoice balance.")
+                raise PaymentExceedsBalance()
 
         receipt_no = cls.generate_receipt_number()
 

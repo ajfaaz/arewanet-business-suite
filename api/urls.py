@@ -15,11 +15,16 @@ from api.views import (
     DashboardAPIView,
 )
 
+from api.views.health import HealthCheckAPIView
+
 router = DefaultRouter()
 router.register(r'categories', ProductCategoryViewSet, basename='api-category')
 router.register(r'subscriptions', SubscriptionViewSet, basename='api-subscription')
 
 urlpatterns = [
+    # Health Check Endpoint
+    path('health/', HealthCheckAPIView.as_view(), name='health'),
+
     # Auth Module
     path('auth/', include('api.authentication.urls')),
 

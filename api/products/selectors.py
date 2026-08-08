@@ -7,4 +7,4 @@ class ProductSelector:
     def list(organization):
         return Product.objects.filter(
             organization=organization
-        ).select_related("category")
+        ).select_related("category", "organization")
