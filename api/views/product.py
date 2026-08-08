@@ -7,8 +7,12 @@ from api.mixins import StandardResponseMixin
 from api.pagination import StandardResultsSetPagination
 
 
-class ProductViewSet(StandardResponseMixin, viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+from core.api import OrganizationModelViewSet
+from core.permissions import IsOrganizationMember
+
+
+class ProductViewSet(StandardResponseMixin, OrganizationModelViewSet):
+    permission_classes = [IsOrganizationMember]
     serializer_class = ProductSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -45,8 +49,8 @@ class ProductViewSet(StandardResponseMixin, viewsets.ModelViewSet):
         return self.error_response(errors=serializer.errors, message="Validation failed.")
 
 
-class ProductCategoryViewSet(StandardResponseMixin, viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+class ProductCategoryViewSet(StandardResponseMixin, OrganizationModelViewSet):
+    permission_classes = [IsOrganizationMember]
     serializer_class = ProductCategorySerializer
 
     def get_queryset(self):

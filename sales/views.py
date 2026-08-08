@@ -89,6 +89,8 @@ def credit_note_detail(request, pk):
         'organization': org,
         'invoice': credit_note.invoice,
         'customer': credit_note.customer,
+        'issue_date': credit_note.created_at,
+        'status_display': credit_note.status,
     })
 
 
@@ -196,6 +198,8 @@ def debit_note_detail(request, pk):
         'organization': org,
         'invoice': debit_note.invoice,
         'customer': debit_note.customer,
+        'issue_date': debit_note.created_at,
+        'status_display': debit_note.status,
     })
 
 

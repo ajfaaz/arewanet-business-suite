@@ -11,8 +11,12 @@ from api.mixins import api_response, StandardResponseMixin
 from api.pagination import StandardResultsSetPagination
 
 
-class CustomerViewSet(StandardResponseMixin, viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+from core.api import OrganizationModelViewSet
+from core.permissions import IsOrganizationMember
+
+
+class CustomerViewSet(StandardResponseMixin, OrganizationModelViewSet):
+    permission_classes = [IsOrganizationMember]
     serializer_class = CustomerSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]

@@ -20,8 +20,12 @@ from api.utils.responses import success, error
 from api.pagination import StandardResultsSetPagination
 
 
-class InvoiceViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+from core.api import OrganizationModelViewSet
+from core.permissions import IsOrganizationMember
+
+
+class InvoiceViewSet(OrganizationModelViewSet):
+    permission_classes = [IsOrganizationMember]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["invoice_no", "customer__company_name"]

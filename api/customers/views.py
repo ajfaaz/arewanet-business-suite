@@ -17,8 +17,12 @@ from api.utils.responses import success, error
 from api.pagination import StandardResultsSetPagination
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+from core.api import OrganizationModelViewSet
+from core.permissions import IsOrganizationMember
+
+
+class CustomerViewSet(OrganizationModelViewSet):
+    permission_classes = [IsOrganizationMember]
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     pagination_class = StandardResultsSetPagination

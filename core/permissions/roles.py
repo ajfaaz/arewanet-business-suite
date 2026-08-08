@@ -1,5 +1,4 @@
 from rest_framework.permissions import BasePermission
-from invoices.views import _get_user_organization
 
 
 def can_create_invoice(user):
@@ -18,38 +17,37 @@ def can_manage_customers(user):
     return user.is_authenticated and (user.is_superuser or hasattr(user, 'profile') and user.profile.role in ['OWNER', 'ADMIN', 'ACCOUNTANT', 'STAFF'])
 
 
-class IsOrganizationMember(BasePermission):
+class CanManageCustomers(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        org = _get_user_organization(request.user)
-        return org is not None or request.user.is_superuser
-
-
-class IsOrganizationAdmin(BasePermission):
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        if request.user.is_superuser:
+        if request.user.has_perm("invoices.manage_customer"):
             return True
-        return hasattr(request.user, 'profile') and request.user.profile.role in ['OWNER', 'ADMIN']
-
-
-class CanManageInvoices(BasePermission):
-    def has_permission(self, request, view):
-        return can_create_invoice(request.user)
+        return can_manage_customers(request.user)
 
 
 class CanManageProducts(BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.has_perm("invoices.manage_product"):
+            return True
+        return True
+
+
+class CanManageInvoices(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.has_perm("invoices.manage_invoice"):
+            return True
+        return can_create_invoice(request.user)
 
 
 class CanManagePayments(BasePermission):
     def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.has_perm("invoices.manage_payment"):
+            return True
         return can_view_reports(request.user)
-
-
-class CanManageCustomers(BasePermission):
-    def has_permission(self, request, view):
-        return can_manage_customers(request.user)
