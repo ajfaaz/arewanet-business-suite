@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "core",
     "invoices",
     "sales",
+    "inventory.apps.InventoryConfig",
     "api",
     "rest_framework",
     "rest_framework_simplejwt",

@@ -24,10 +24,10 @@ def api_exception_handler(exc, context):
         )
 
     data = response.data
-    if hasattr(exc, "default_code"):
-        code = str(exc.default_code)
-    elif hasattr(exc, "code"):
+    if hasattr(exc, "code") and getattr(exc, "code", None):
         code = str(exc.code)
+    elif hasattr(exc, "default_code"):
+        code = str(exc.default_code)
     elif response.status_code == 404:
         code = "not_found"
     elif response.status_code == 401:

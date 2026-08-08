@@ -46,6 +46,10 @@ urlpatterns = [
     # Dashboard Module
     path('dashboard/', include('api.dashboard.urls')),
 
+    # Inventory Module
+    path('inventory/', include('api.inventory.urls')),
+    path('warehouses/', include('api.inventory.urls')),
+
     # OpenAPI Schema & Interactive Docs
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
