@@ -13,12 +13,12 @@ def success(data=None, message="Success", status_code=status.HTTP_200_OK):
     )
 
 
-def error(errors=None, message="Error", status_code=status.HTTP_400_BAD_REQUEST):
-    return Response(
-        {
-            "success": False,
-            "message": message,
-            "errors": errors,
-        },
-        status=status_code,
-    )
+def error(errors=None, message="Error", status_code=status.HTTP_400_BAD_REQUEST, code=None):
+    payload = {
+        "success": False,
+        "message": message,
+        "errors": errors or {},
+    }
+    if code:
+        payload["code"] = code
+    return Response(payload, status=status_code)

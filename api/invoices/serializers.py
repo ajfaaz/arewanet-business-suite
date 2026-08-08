@@ -36,6 +36,11 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         source="customer.company_name",
         read_only=True
     )
+    warehouse_name = serializers.CharField(
+        source="warehouse.name",
+        read_only=True,
+        default=None
+    )
     balance_due = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
@@ -45,6 +50,9 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             "invoice_no",
             "customer",
             "customer_name",
+            "warehouse",
+            "warehouse_name",
+            "inventory_updated",
             "invoice_date",
             "due_date",
             "status",

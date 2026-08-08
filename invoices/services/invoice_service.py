@@ -133,3 +133,96 @@ class InvoiceService:
             )
 
         return invoice
+
+    @classmethod
+    @transaction.atomic
+    def complete_invoice(cls, invoice, user=None):
+        """
+        Atomically complete an invoice and issue inventory stock.
+        """
+        # 1. Double completion & stock deduction protection
+        if invoice.inventory_updated:
+            return invoice
+
+        # 2. Validate warehouse assignment
+        if not invoice.warehouse:
+            from inventory.models import Warehouse
+            invoice.warehouse = Warehouse.objects.filter(organization=invoice.organization, is_active=True).first()
+            if not invoice.warehouse:
+                raise ValidationError("A warehouse must be assigned to issue stock for an invoice.")
+
+        if invoice.organization and invoice.warehouse.organization != invoice.organization:
+            from core.exceptions import WarehouseOrganizationMismatch
+            raise WarehouseOrganizationMismatch()
+
+        # 3. Validate stock for ALL items before making any modifications
+        from inventory.services import StockService
+        from core.exceptions import InsufficientStockError
+
+        for item in invoice.items.all():
+            if item.product:
+                available = StockService.get_balance(item.product, warehouse=invoice.warehouse)
+                required = Decimal(str(item.qty))
+                if available < required:
+                    raise InsufficientStockError(
+                        f"Insufficient stock for product '{item.product.name}'. Required: {required}, Available: {available}"
+                    )
+
+        # 4. Issue stock for each invoice item via StockService
+        for item in invoice.items.all():
+            if item.product:
+                StockService.issue(
+                    product=item.product,
+                    warehouse=invoice.warehouse,
+                    quantity=Decimal(str(item.qty)),
+                    reference_type="INVOICE",
+                    reference_id=invoice.id,
+                    notes=f"Stock issued for Invoice #{invoice.invoice_no}"
+                )
+
+        # 5. Update invoice state
+        invoice.inventory_updated = True
+        if invoice.status in ['DRAFT', 'PENDING']:
+            invoice.status = 'UNPAID'
+        invoice.save(update_fields=['warehouse', 'inventory_updated', 'status'])
+
+        if user and hasattr(user, 'is_authenticated') and user.is_authenticated:
+            AuditService.log(
+                user=user,
+                action=f"Completed Invoice #{invoice.invoice_no} and issued stock from {invoice.warehouse.name}",
+                reference=invoice.invoice_no
+            )
+
+        return invoice
+
+    @classmethod
+    @transaction.atomic
+    def cancel_invoice(cls, invoice, user=None):
+        """
+        Atomically cancel an invoice and restore issued stock.
+        """
+        if invoice.inventory_updated and invoice.warehouse:
+            from inventory.services import StockService
+            for item in invoice.items.all():
+                if item.product:
+                    StockService.receive(
+                        product=item.product,
+                        warehouse=invoice.warehouse,
+                        quantity=Decimal(str(item.qty)),
+                        reference_type="INVOICE_CANCEL",
+                        reference_id=invoice.id,
+                        notes=f"Stock restored for cancelled Invoice #{invoice.invoice_no}"
+                    )
+            invoice.inventory_updated = False
+
+        invoice.status = 'CANCELLED'
+        invoice.save(update_fields=['inventory_updated', 'status'])
+
+        if user and hasattr(user, 'is_authenticated') and user.is_authenticated:
+            AuditService.log(
+                user=user,
+                action=f"Cancelled Invoice #{invoice.invoice_no} and restored stock",
+                reference=invoice.invoice_no
+            )
+
+        return invoice

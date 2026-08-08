@@ -22,6 +22,7 @@ from api.pagination import StandardResultsSetPagination
 
 from core.api import OrganizationModelViewSet
 from core.permissions import IsOrganizationMember
+from core.exceptions import InsufficientStockError
 
 
 class InvoiceViewSet(OrganizationModelViewSet):
@@ -184,6 +185,40 @@ class InvoiceViewSet(OrganizationModelViewSet):
         invoice = self.get_object()
         InvoiceService.email_invoice(invoice, request.user)
         return success(message=f"Invoice #{invoice.invoice_no} sent via email.")
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        invoice = self.get_object()
+        try:
+            invoice = InvoiceService.complete_invoice(invoice, user=request.user)
+            return success(
+                data={
+                    "invoice_id": invoice.id,
+                    "invoice_no": invoice.invoice_no,
+                    "status": invoice.status,
+                    "inventory_updated": invoice.inventory_updated
+                },
+                message="Invoice completed and stock issued successfully."
+            )
+        except InsufficientStockError as e:
+            return error(message=str(e), code="insufficient_stock", status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            err_code = getattr(getattr(e, 'detail', None), 'code', None) or getattr(e, 'code', None) or getattr(e, 'default_code', 'error')
+            return error(message=str(e), code=str(err_code), status_code=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        invoice = self.get_object()
+        invoice = InvoiceService.cancel_invoice(invoice, user=request.user)
+        return success(
+            data={
+                "invoice_id": invoice.id,
+                "invoice_no": invoice.invoice_no,
+                "status": invoice.status,
+                "inventory_updated": invoice.inventory_updated
+            },
+            message="Invoice cancelled and stock restored successfully."
+        )
 
     @action(detail=True, methods=["post"])
     def duplicate(self, request, pk=None):

@@ -362,6 +362,18 @@ class Invoice(models.Model):
         default='DRAFT'
     )
 
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="invoices"
+    )
+
+    inventory_updated = models.BooleanField(
+        default=False
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )

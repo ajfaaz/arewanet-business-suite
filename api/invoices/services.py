@@ -86,6 +86,16 @@ class InvoiceService:
         return new_invoice
 
     @staticmethod
+    def complete_invoice(invoice, user=None):
+        from invoices.services.invoice_service import InvoiceService as DomainInvoiceService
+        return DomainInvoiceService.complete_invoice(invoice, user=user)
+
+    @staticmethod
+    def cancel_invoice(invoice, user=None):
+        from invoices.services.invoice_service import InvoiceService as DomainInvoiceService
+        return DomainInvoiceService.cancel_invoice(invoice, user=user)
+
+    @staticmethod
     def email_invoice(invoice, user):
         # Create audit log activity entry
         ActivityLog.objects.create(
