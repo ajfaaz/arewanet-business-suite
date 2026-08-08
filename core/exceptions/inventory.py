@@ -20,3 +20,13 @@ class WarehouseOrganizationMismatch(BusinessRuleError):
     """
     code = "WAREHOUSE_ORGANIZATION_MISMATCH"
     message = "Warehouse and product must belong to the same organization."
+
+
+class InvalidDocumentStatusError(BusinessRuleError):
+    """
+    Raised when attempting an invalid status transition on an inventory document.
+    """
+    code = "invalid_document_status"
+    default_code = "invalid_document_status"
+    message = "Operation is not allowed for the current document status."
+    default_detail = "Operation is not allowed for the current document status."

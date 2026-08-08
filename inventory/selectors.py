@@ -1,5 +1,8 @@
 from core.selectors.base import BaseSelector
-from inventory.models import Warehouse, WarehouseLocation, InventoryItem, StockMovement
+from inventory.models import (
+    Warehouse, WarehouseLocation, InventoryItem, StockMovement,
+    GoodsReceivedNote, GoodsIssueNote, StockTransferDocument, StockAdjustmentDocument
+)
 
 
 class WarehouseSelector(BaseSelector):
@@ -46,3 +49,35 @@ class StockMovementSelector(BaseSelector):
         return StockMovement.objects.filter(
             organization=organization
         ).select_related("product", "warehouse", "location")
+
+
+class GoodsReceivedNoteSelector(BaseSelector):
+    @staticmethod
+    def list(organization):
+        return GoodsReceivedNote.objects.filter(
+            organization=organization
+        ).select_related("warehouse", "created_by", "approved_by", "completed_by").prefetch_related("items__product")
+
+
+class GoodsIssueNoteSelector(BaseSelector):
+    @staticmethod
+    def list(organization):
+        return GoodsIssueNote.objects.filter(
+            organization=organization
+        ).select_related("warehouse", "created_by", "approved_by", "completed_by").prefetch_related("items__product")
+
+
+class StockTransferDocumentSelector(BaseSelector):
+    @staticmethod
+    def list(organization):
+        return StockTransferDocument.objects.filter(
+            organization=organization
+        ).select_related("source_warehouse", "destination_warehouse", "created_by", "approved_by", "completed_by").prefetch_related("items__product")
+
+
+class StockAdjustmentDocumentSelector(BaseSelector):
+    @staticmethod
+    def list(organization):
+        return StockAdjustmentDocument.objects.filter(
+            organization=organization
+        ).select_related("warehouse", "created_by", "approved_by", "completed_by").prefetch_related("items__product")

@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from inventory.models import Warehouse, WarehouseLocation, InventoryItem, StockMovement
+from inventory.models import (
+    Warehouse, WarehouseLocation, InventoryItem, StockMovement,
+    GoodsReceivedNote, GoodsReceivedNoteItem,
+    GoodsIssueNote, GoodsIssueNoteItem,
+    StockTransferDocument, StockTransferDocumentItem,
+    StockAdjustmentDocument, StockAdjustmentDocumentItem,
+)
 from invoices.models import Product
 
 
@@ -124,3 +130,185 @@ class StockTransferSerializer(serializers.Serializer):
         if attrs["from_warehouse"] == attrs["to_warehouse"] and attrs.get("from_location") == attrs.get("to_location"):
             raise serializers.ValidationError("Source and Destination warehouse/location must be different.")
         return attrs
+
+
+# -------------------------------------------------------------------------
+# Inventory Document Serializers
+# -------------------------------------------------------------------------
+
+class GoodsReceivedNoteItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+
+    class Meta:
+        model = GoodsReceivedNoteItem
+        fields = ["id", "product", "product_name", "product_sku", "quantity", "unit_cost"]
+
+
+class GoodsReceivedNoteSerializer(serializers.ModelSerializer):
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
+    approved_by_username = serializers.CharField(source="approved_by.username", read_only=True, default=None)
+    completed_by_username = serializers.CharField(source="completed_by.username", read_only=True, default=None)
+    items = GoodsReceivedNoteItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = GoodsReceivedNote
+        fields = [
+            "id",
+            "organization",
+            "document_number",
+            "warehouse",
+            "warehouse_name",
+            "warehouse_code",
+            "supplier_name",
+            "received_date",
+            "status",
+            "notes",
+            "created_by",
+            "created_by_username",
+            "approved_by",
+            "approved_by_username",
+            "completed_by",
+            "completed_by_username",
+            "items",
+            "created_at",
+            "updated_at",
+            "approved_at",
+            "completed_at",
+        ]
+        read_only_fields = ("id", "organization", "document_number", "status", "created_at", "updated_at", "approved_at", "completed_at")
+
+
+class GoodsIssueNoteItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+
+    class Meta:
+        model = GoodsIssueNoteItem
+        fields = ["id", "product", "product_name", "product_sku", "quantity"]
+
+
+class GoodsIssueNoteSerializer(serializers.ModelSerializer):
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
+    approved_by_username = serializers.CharField(source="approved_by.username", read_only=True, default=None)
+    completed_by_username = serializers.CharField(source="completed_by.username", read_only=True, default=None)
+    items = GoodsIssueNoteItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = GoodsIssueNote
+        fields = [
+            "id",
+            "organization",
+            "document_number",
+            "warehouse",
+            "warehouse_name",
+            "warehouse_code",
+            "issue_date",
+            "status",
+            "notes",
+            "created_by",
+            "created_by_username",
+            "approved_by",
+            "approved_by_username",
+            "completed_by",
+            "completed_by_username",
+            "items",
+            "created_at",
+            "updated_at",
+            "approved_at",
+            "completed_at",
+        ]
+        read_only_fields = ("id", "organization", "document_number", "status", "created_at", "updated_at", "approved_at", "completed_at")
+
+
+class StockTransferDocumentItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+
+    class Meta:
+        model = StockTransferDocumentItem
+        fields = ["id", "product", "product_name", "product_sku", "quantity"]
+
+
+class StockTransferDocumentSerializer(serializers.ModelSerializer):
+    source_warehouse_name = serializers.CharField(source="source_warehouse.name", read_only=True)
+    destination_warehouse_name = serializers.CharField(source="destination_warehouse.name", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
+    approved_by_username = serializers.CharField(source="approved_by.username", read_only=True, default=None)
+    completed_by_username = serializers.CharField(source="completed_by.username", read_only=True, default=None)
+    items = StockTransferDocumentItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = StockTransferDocument
+        fields = [
+            "id",
+            "organization",
+            "document_number",
+            "source_warehouse",
+            "source_warehouse_name",
+            "destination_warehouse",
+            "destination_warehouse_name",
+            "transfer_date",
+            "status",
+            "notes",
+            "created_by",
+            "created_by_username",
+            "approved_by",
+            "approved_by_username",
+            "completed_by",
+            "completed_by_username",
+            "items",
+            "created_at",
+            "updated_at",
+            "approved_at",
+            "completed_at",
+        ]
+        read_only_fields = ("id", "organization", "document_number", "status", "created_at", "updated_at", "approved_at", "completed_at")
+
+
+class StockAdjustmentDocumentItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+
+    class Meta:
+        model = StockAdjustmentDocumentItem
+        fields = ["id", "product", "product_name", "product_sku", "system_quantity", "counted_quantity", "difference", "reason"]
+
+
+class StockAdjustmentDocumentSerializer(serializers.ModelSerializer):
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
+    approved_by_username = serializers.CharField(source="approved_by.username", read_only=True, default=None)
+    completed_by_username = serializers.CharField(source="completed_by.username", read_only=True, default=None)
+    items = StockAdjustmentDocumentItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = StockAdjustmentDocument
+        fields = [
+            "id",
+            "organization",
+            "document_number",
+            "warehouse",
+            "warehouse_name",
+            "warehouse_code",
+            "adjustment_date",
+            "status",
+            "notes",
+            "created_by",
+            "created_by_username",
+            "approved_by",
+            "approved_by_username",
+            "completed_by",
+            "completed_by_username",
+            "items",
+            "created_at",
+            "updated_at",
+            "approved_at",
+            "completed_at",
+        ]
+        read_only_fields = ("id", "organization", "document_number", "status", "created_at", "updated_at", "approved_at", "completed_at")

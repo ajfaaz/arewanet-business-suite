@@ -1,6 +1,14 @@
 from django.db import models
+from django.contrib.auth import get_user_model
 from invoices.models import Organization, Product
-from inventory.constants import MOVEMENT_TYPE_CHOICES, MOVEMENT_TYPE_OPENING
+from inventory.constants import (
+    MOVEMENT_TYPE_CHOICES,
+    MOVEMENT_TYPE_OPENING,
+    DOC_STATUS_DRAFT,
+    DOC_STATUS_CHOICES,
+)
+
+User = get_user_model()
 
 
 class Warehouse(models.Model):
@@ -193,3 +201,245 @@ class StockMovement(models.Model):
     def __str__(self):
         sign = "+" if self.quantity > 0 else ""
         return f"[{self.movement_type}] {self.product.name} ({sign}{self.quantity}) @ {self.warehouse.code}"
+
+
+class BaseInventoryDocument(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE
+    )
+    document_number = models.CharField(
+        max_length=50
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=DOC_STATUS_CHOICES,
+        default=DOC_STATUS_DRAFT
+    )
+    notes = models.TextField(
+        blank=True
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True
+    )
+    completed_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        abstract = True
+
+
+class GoodsReceivedNote(BaseInventoryDocument):
+    supplier_name = models.CharField(
+        max_length=255,
+        blank=True
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="goods_received_notes"
+    )
+    received_date = models.DateField()
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "document_number"],
+                name="unique_grn_number_per_org"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.document_number} ({self.status}) @ {self.warehouse.code}"
+
+
+class GoodsReceivedNoteItem(models.Model):
+    grn = models.ForeignKey(
+        GoodsReceivedNote,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+    quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+    unit_cost = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"{self.grn.document_number}: {self.product.name} x {self.quantity}"
+
+
+class GoodsIssueNote(BaseInventoryDocument):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="goods_issue_notes"
+    )
+    issue_date = models.DateField()
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "document_number"],
+                name="unique_gin_number_per_org"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.document_number} ({self.status}) @ {self.warehouse.code}"
+
+
+class GoodsIssueNoteItem(models.Model):
+    gin = models.ForeignKey(
+        GoodsIssueNote,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+    quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+
+    def __str__(self):
+        return f"{self.gin.document_number}: {self.product.name} x {self.quantity}"
+
+
+class StockTransferDocument(BaseInventoryDocument):
+    source_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="outgoing_transfers"
+    )
+    destination_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="incoming_transfers"
+    )
+    transfer_date = models.DateField()
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "document_number"],
+                name="unique_transfer_number_per_org"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.document_number} ({self.status}) {self.source_warehouse.code} -> {self.destination_warehouse.code}"
+
+
+class StockTransferDocumentItem(models.Model):
+    transfer = models.ForeignKey(
+        StockTransferDocument,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+    quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+
+    def __str__(self):
+        return f"{self.transfer.document_number}: {self.product.name} x {self.quantity}"
+
+
+class StockAdjustmentDocument(BaseInventoryDocument):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="adjustments"
+    )
+    adjustment_date = models.DateField()
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "document_number"],
+                name="unique_adjustment_number_per_org"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.document_number} ({self.status}) @ {self.warehouse.code}"
+
+
+class StockAdjustmentDocumentItem(models.Model):
+    adjustment = models.ForeignKey(
+        StockAdjustmentDocument,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+    system_quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+    counted_quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+    difference = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+    reason = models.TextField(
+        blank=True
+    )
+
+    def __str__(self):
+        return f"{self.adjustment.document_number}: {self.product.name} (Diff: {self.difference})"

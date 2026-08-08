@@ -25,3 +25,18 @@ MOVEMENT_TYPE_CHOICES = (
     (MOVEMENT_TYPE_DAMAGE, "Damaged Stock Write-off"),
     (MOVEMENT_TYPE_EXPIRED, "Expired Stock Write-off"),
 )
+
+# Inventory Document Status Constants
+DOC_STATUS_DRAFT = "DRAFT"
+DOC_STATUS_PENDING = "PENDING"
+DOC_STATUS_APPROVED = "APPROVED"
+DOC_STATUS_COMPLETED = "COMPLETED"
+DOC_STATUS_CANCELLED = "CANCELLED"
+
+DOC_STATUS_CHOICES = (
+    (DOC_STATUS_DRAFT, "Draft"),
+    (DOC_STATUS_PENDING, "Pending Review"),
+    (DOC_STATUS_APPROVED, "Approved"),
+    (DOC_STATUS_COMPLETED, "Completed"),
+    (DOC_STATUS_CANCELLED, "Cancelled"),
+)
