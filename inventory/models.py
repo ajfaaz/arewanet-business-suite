@@ -260,6 +260,13 @@ class BaseInventoryDocument(models.Model):
 
 
 class GoodsReceivedNote(BaseInventoryDocument):
+    purchase_order = models.ForeignKey(
+        'purchases.PurchaseOrder',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="grns"
+    )
     supplier_name = models.CharField(
         max_length=255,
         blank=True

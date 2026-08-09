@@ -50,6 +50,10 @@ urlpatterns = [
     path('inventory/', include('api.inventory.urls')),
     path('warehouses/', include('api.inventory.urls')),
 
+    # Suppliers & Purchase Orders Module
+    path('suppliers/', include('api.suppliers.urls')),
+    path('purchase-orders/', include('api.purchases.urls')),
+
     # OpenAPI Schema & Interactive Docs
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

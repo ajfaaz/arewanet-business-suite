@@ -48,7 +48,7 @@ class InventoryDocumentService:
     # -------------------------------------------------------------------------
     @classmethod
     @transaction.atomic
-    def create_grn(cls, organization, warehouse, received_date, items_data, supplier_name="", notes="", user=None):
+    def create_grn(cls, organization, warehouse, received_date, items_data, supplier_name="", notes="", purchase_order=None, user=None):
         if warehouse.organization != organization:
             raise WarehouseOrganizationMismatch()
 
@@ -58,7 +58,8 @@ class InventoryDocumentService:
             document_number=doc_number,
             warehouse=warehouse,
             received_date=received_date,
-            supplier_name=supplier_name,
+            supplier_name=supplier_name or (purchase_order.supplier.company_name if purchase_order else ""),
+            purchase_order=purchase_order,
             notes=notes,
             created_by=user,
             status=DOC_STATUS_DRAFT
@@ -99,10 +100,44 @@ class InventoryDocumentService:
     @staticmethod
     @transaction.atomic
     def complete_grn(grn, user=None):
+        from core.exceptions import BusinessRuleError
+
         if grn.status == DOC_STATUS_COMPLETED:
             raise InvalidDocumentStatusError("This GRN is already completed.")
         if grn.status == DOC_STATUS_CANCELLED:
             raise InvalidDocumentStatusError("Cannot complete a cancelled GRN.")
+
+        po = grn.purchase_order
+        if po:
+            if po.status not in ("APPROVED", "PARTIAL_RECEIPT"):
+                raise BusinessRuleError(f"Cannot receive goods for purchase order in '{po.status}' status.")
+
+            # Validate over-receiving for all items
+            for item in grn.items.all():
+                po_item = po.items.filter(product=item.product).first()
+                if po_item:
+                    remaining = po_item.remaining_quantity
+                    if Decimal(str(item.quantity)) > remaining:
+                        raise BusinessRuleError(
+                            f"Cannot receive {item.quantity} units of '{item.product.name}'. Only {remaining} units remain on the purchase order."
+                        )
+
+            # Update received quantities
+            for item in grn.items.all():
+                po_item = po.items.filter(product=item.product).first()
+                if po_item:
+                    po_item.received_quantity += Decimal(str(item.quantity))
+                    po_item.save(update_fields=["received_quantity"])
+
+            # Update PO status
+            all_received = all(
+                pi.received_quantity >= pi.quantity for pi in po.items.all()
+            )
+            if all_received:
+                po.status = "RECEIVED"
+            else:
+                po.status = "PARTIAL_RECEIPT"
+            po.save(update_fields=["status", "updated_at"])
 
         for item in grn.items.all():
             StockService.receive(
