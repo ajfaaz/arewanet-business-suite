@@ -598,3 +598,106 @@ class StockAdjustmentDocumentViewSet(OrganizationModelViewSet):
         adj = self.get_object()
         adj = InventoryDocumentService.cancel_adjustment(adj)
         return success(data=self.get_serializer(adj).data, message="Adjustment cancelled.")
+
+
+from rest_framework.views import APIView
+from inventory.intelligence_services import InventoryAnalyticsSelector, StockLevelService
+from inventory.models import StockAlert
+from api.inventory.serializers import StockAlertSerializer, StockMovementSerializer
+
+
+class InventoryDashboardAPIView(APIView):
+    permission_classes = [IsOrganizationMember]
+
+    def get(self, request):
+        org = _get_user_organization(request.user)
+        wh_id = request.query_params.get("warehouse")
+        wh = WarehouseSelector.get_by_id(org, wh_id) if wh_id else None
+
+        data = InventoryAnalyticsSelector.get_dashboard_summary(org, warehouse=wh)
+        return success(data=data, message="Inventory dashboard summary retrieved successfully.")
+
+
+class InventoryStatisticsAPIView(APIView):
+    permission_classes = [IsOrganizationMember]
+
+    def get(self, request):
+        org = _get_user_organization(request.user)
+        wh_id = request.query_params.get("warehouse")
+        wh = WarehouseSelector.get_by_id(org, wh_id) if wh_id else None
+        from_date = request.query_params.get("from")
+        to_date = request.query_params.get("to")
+
+        data = InventoryAnalyticsSelector.get_statistics(org, from_date=from_date, to_date=to_date, warehouse=wh)
+        return success(data=data, message="Inventory statistics retrieved successfully.")
+
+
+class RecentStockMovementsAPIView(APIView):
+    permission_classes = [IsOrganizationMember]
+
+    def get(self, request):
+        org = _get_user_organization(request.user)
+        wh_id = request.query_params.get("warehouse")
+        product_id = request.query_params.get("product")
+        m_type = request.query_params.get("movement_type")
+        limit = int(request.query_params.get("limit", 20))
+
+        wh = WarehouseSelector.get_by_id(org, wh_id) if wh_id else None
+        product = Product.objects.filter(organization=org, pk=product_id).first() if product_id else None
+
+        movements = InventoryAnalyticsSelector.get_recent_movements(
+            org, warehouse=wh, product=product, movement_type=m_type, limit=limit
+        )
+        serializer = StockMovementSerializer(movements, many=True)
+        return success(data=serializer.data, message="Recent stock movements retrieved successfully.")
+
+
+class TopProductsAPIView(APIView):
+    permission_classes = [IsOrganizationMember]
+
+    def get(self, request):
+        org = _get_user_organization(request.user)
+        from_date = request.query_params.get("from")
+        to_date = request.query_params.get("to")
+        limit = int(request.query_params.get("limit", 10))
+
+        data = InventoryAnalyticsSelector.get_top_products(org, from_date=from_date, to_date=to_date, limit=limit)
+        return success(data=data, message="Top moving products retrieved successfully.")
+
+
+class SlowMovingProductsAPIView(APIView):
+    permission_classes = [IsOrganizationMember]
+
+    def get(self, request):
+        org = _get_user_organization(request.user)
+        days = int(request.query_params.get("days", 30))
+        limit = int(request.query_params.get("limit", 10))
+
+        data = InventoryAnalyticsSelector.get_slow_moving_products(org, days=days, limit=limit)
+        return success(data=data, message="Slow moving products retrieved successfully.")
+
+
+class ReorderRecommendationsAPIView(APIView):
+    permission_classes = [IsOrganizationMember]
+
+    def get(self, request):
+        org = _get_user_organization(request.user)
+        wh_id = request.query_params.get("warehouse")
+        wh = WarehouseSelector.get_by_id(org, wh_id) if wh_id else None
+
+        data = InventoryAnalyticsSelector.get_reorder_recommendations(org, warehouse=wh)
+        return success(data=data, message="Reorder recommendations retrieved successfully.")
+
+
+class StockAlertViewSet(OrganizationModelViewSet):
+    permission_classes = [IsOrganizationMember]
+    serializer_class = StockAlertSerializer
+    filterset_fields = ["is_resolved", "alert_type", "warehouse"]
+    search_fields = ["product__name", "product__sku"]
+    ordering_fields = ["created_at", "current_quantity"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        org = _get_user_organization(self.request.user)
+        return StockAlert.objects.filter(organization=org).select_related("product", "warehouse")
+

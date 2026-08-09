@@ -72,6 +72,9 @@ class StockService(BaseService):
             item.save(update_fields=["quantity", "updated_at"])
             item.refresh_from_db()
 
+        from inventory.intelligence_services import StockAlertService
+        StockAlertService.evaluate(product, warehouse)
+
         return movement
 
     @classmethod
@@ -141,6 +144,9 @@ class StockService(BaseService):
             item.save(update_fields=["quantity", "updated_at"])
             item.refresh_from_db()
 
+        from inventory.intelligence_services import StockAlertService
+        StockAlertService.evaluate(product, warehouse)
+
         return movement
 
     @classmethod
@@ -209,6 +215,9 @@ class StockService(BaseService):
         else:
             item.quantity = target_qty
             item.save(update_fields=["quantity", "updated_at"])
+
+        from inventory.intelligence_services import StockAlertService
+        StockAlertService.evaluate(product, warehouse)
 
         return movement
 

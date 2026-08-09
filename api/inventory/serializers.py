@@ -4,7 +4,7 @@ from inventory.models import (
     GoodsReceivedNote, GoodsReceivedNoteItem,
     GoodsIssueNote, GoodsIssueNoteItem,
     StockTransferDocument, StockTransferDocumentItem,
-    StockAdjustmentDocument, StockAdjustmentDocumentItem,
+    StockAdjustmentDocument, StockAdjustmentDocumentItem, StockAlert,
 )
 from invoices.models import Product
 
@@ -312,3 +312,29 @@ class StockAdjustmentDocumentSerializer(serializers.ModelSerializer):
             "completed_at",
         ]
         read_only_fields = ("id", "organization", "document_number", "status", "created_at", "updated_at", "approved_at", "completed_at")
+
+
+class StockAlertSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True, default=None)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True, default=None)
+
+    class Meta:
+        model = StockAlert
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "product_sku",
+            "warehouse",
+            "warehouse_name",
+            "warehouse_code",
+            "alert_type",
+            "current_quantity",
+            "threshold",
+            "is_resolved",
+            "created_at",
+            "resolved_at",
+        ]
+

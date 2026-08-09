@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth import get_user_model
 from invoices.models import Organization, Product
@@ -450,3 +451,67 @@ class StockAdjustmentDocumentItem(models.Model):
 
     def __str__(self):
         return f"{self.adjustment.document_number}: {self.product.name} (Diff: {self.difference})"
+
+
+class StockAlert(models.Model):
+    ALERT_TYPES = (
+        ("OUT_OF_STOCK", "Out of Stock"),
+        ("LOW_STOCK", "Low Stock"),
+        ("OVERSTOCK", "Overstock"),
+    )
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="stock_alerts"
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="stock_alerts"
+    )
+
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="stock_alerts"
+    )
+
+    alert_type = models.CharField(
+        max_length=30,
+        choices=ALERT_TYPES
+    )
+
+    current_quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+
+    threshold = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    is_resolved = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        wh_code = self.warehouse.code if self.warehouse else "Global"
+        return f"[{self.alert_type}] {self.product.name} @ {wh_code} (Qty: {self.current_quantity}, Resolved: {self.is_resolved})"

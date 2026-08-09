@@ -4,8 +4,16 @@ from inventory.models import (
     GoodsReceivedNote, GoodsReceivedNoteItem,
     GoodsIssueNote, GoodsIssueNoteItem,
     StockTransferDocument, StockTransferDocumentItem,
-    StockAdjustmentDocument, StockAdjustmentDocumentItem,
+    StockTransferDocument, StockTransferDocumentItem,
+    StockAdjustmentDocument, StockAdjustmentDocumentItem, StockAlert,
 )
+
+
+@admin.register(StockAlert)
+class StockAlertAdmin(admin.ModelAdmin):
+    list_display = ("alert_type", "product", "warehouse", "current_quantity", "threshold", "is_resolved", "organization", "created_at")
+    list_filter = ("organization", "alert_type", "is_resolved", "warehouse")
+    search_fields = ("product__name", "product__sku", "warehouse__name")
 
 
 @admin.register(Warehouse)

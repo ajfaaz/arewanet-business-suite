@@ -248,6 +248,25 @@ class Product(models.Model):
         default=True
     )
 
+    reorder_level = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    minimum_stock = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    maximum_stock = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
     image = models.ImageField(
         upload_to="products/",
         blank=True,
