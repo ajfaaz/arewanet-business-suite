@@ -1,0 +1,37 @@
+<div class="row mb-4">
+    {% if customer %}
+    <div class="col-6">
+        <div class="address-box">
+            <div class="address-title">Customer / Bill To</div>
+            <div class="fw-bold fs-6" style="color: var(--primary-color);">{{ customer.company_name }}</div>
+            {% if customer.contact_person %}<div>Attn: {{ customer.contact_person }}</div>{% endif %}
+            {% if customer.address %}<div>{{ customer.address }}</div>{% endif %}
+            {% if customer.phone %}<div>Phone: {{ customer.phone }}</div>{% endif %}
+            {% if customer.email %}<div>Email: {{ customer.email }}</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if supplier %}
+    <div class="col-6">
+        <div class="address-box">
+            <div class="address-title">Supplier / Vendor</div>
+            <div class="fw-bold fs-6" style="color: var(--primary-color);">{{ supplier.company_name }}</div>
+            {% if supplier.contact_person %}<div>Attn: {{ supplier.contact_person }}</div>{% endif %}
+            {% if supplier.address %}<div>{{ supplier.address }}</div>{% endif %}
+            {% if supplier.phone %}<div>Phone: {{ supplier.phone }}</div>{% endif %}
+            {% if supplier.email %}<div>Email: {{ supplier.email }}</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if warehouse %}
+    <div class="col-6">
+        <div class="address-box">
+            <div class="address-title">Warehouse Location</div>
+            <div class="fw-bold fs-6" style="color: var(--primary-color);">{{ warehouse.name }} ({{ warehouse.code }})</div>
+            {% if warehouse.address %}<div>{{ warehouse.address }}</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>

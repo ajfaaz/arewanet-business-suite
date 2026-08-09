@@ -1025,14 +1025,18 @@ def quotation_create(request):
 def quotation_detail(request, pk):
     org = _get_user_organization(request.user)
     quotation = get_object_or_404(Quotation, pk=pk, organization=org)
-    return render(
-        request,
-        'quotations/quotation_detail.html',
-        {
-            'quotation': quotation,
-            'items': quotation.items.all()
+    from core.documents.context_builder import DocumentContextBuilder
+    context = DocumentContextBuilder.build(
+        quotation,
+        title=f"Quotation #{quotation.quotation_no}",
+        extra_context={
+            "customer": quotation.customer,
+            "date": quotation.quotation_date,
+            "valid_until": quotation.valid_until,
+            "doc_type": "QUOTATION",
         }
     )
+    return render(request, "documents/quotation/detail.html", context)
 
 
 @login_required

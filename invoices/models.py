@@ -415,6 +415,14 @@ class Invoice(models.Model):
         return direct_paid + legacy_paid + allocated_paid
 
     @property
+    def total(self):
+        return self.total_due
+
+    @total.setter
+    def total(self, value):
+        self.total_due = value
+
+    @property
     def amount_paid(self):
         return self.total_paid
 
@@ -782,6 +790,10 @@ class Receipt(models.Model):
                 "RCT",
             )
         super().save(*args, **kwargs)
+
+    @property
+    def amount(self):
+        return self.payment.amount if self.payment else Decimal("0.00")
 
     def __str__(self):
         return self.receipt_no

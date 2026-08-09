@@ -169,6 +169,7 @@ urlpatterns = [
     path('quotation/<int:pk>/', views.quotation_detail, name='quotation_detail'),
     path('quotation/<int:pk>/print/', views.quotation_print, name='quotation_print'),
     path('quotation/<int:pk>/convert/', views.quotation_convert, name='quotation_convert'),
+    path('quotation/<int:pk>/convert-to-invoice/', views.quotation_convert, name='quotation_convert_to_invoice'),
     path('quotation/<int:pk>/delete/', views.quotation_delete, name='quotation_delete'),
 
     # Credit Notes

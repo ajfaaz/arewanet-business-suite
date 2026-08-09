@@ -1,0 +1,52 @@
+{% extends "documents/base_document.html" %}
+
+{% block title %}Transfer #{{ document.document_number }}{% endblock %}
+
+{% block doc_type_title %}STOCK TRANSFER{% endblock %}
+
+{% block content %}
+
+    <div class="row mb-4">
+        <div class="col-6">
+            <div class="address-box">
+                <div class="address-title">Source Warehouse (FROM)</div>
+                <div class="fw-bold fs-6" style="color: var(--primary-color);">{{ document.source_warehouse.name }} ({{ document.source_warehouse.code }})</div>
+                {% if document.source_warehouse.address %}<div>{{ document.source_warehouse.address }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="address-box" style="border-left-color: #2B6CB0;">
+                <div class="address-title">Destination Warehouse (TO)</div>
+                <div class="fw-bold fs-6" style="color: #2B6CB0;">{{ document.destination_warehouse.name }} ({{ document.destination_warehouse.code }})</div>
+                {% if document.destination_warehouse.address %}<div>{{ document.destination_warehouse.address }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th style="width: 10%;">#</th>
+                <th style="width: 60%;">Product Description</th>
+                <th style="width: 30%; text-align: right;">Quantity Transferred</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in document.items.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                    <strong>{{ item.product.name }}</strong>
+                    <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
+                </td>
+                <td style="text-align: right;">{{ item.quantity }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center text-muted">No items in this Stock Transfer document.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

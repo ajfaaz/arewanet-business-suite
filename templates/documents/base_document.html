@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ title|default:"Document" }}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0F3F62;
+            --secondary-color: #4A5568;
+            --border-color: #E2E8F0;
+            --bg-light: #F7FAFC;
+        }
+
+        body {
+            background-color: #EDF2F7;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #2D3748;
+            padding: 20px 0;
+        }
+
+        .document-actions-bar {
+            max-width: 800px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .document-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            min-height: 1050px;
+        }
+
+        .document-header {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .org-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .org-details {
+            font-size: 13px;
+            color: var(--secondary-color);
+            line-height: 1.5;
+        }
+
+        .doc-title-box {
+            text-align: right;
+        }
+
+        .doc-type-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .doc-number {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .address-box {
+            background-color: var(--bg-light);
+            padding: 16px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 24px;
+            font-size: 13px;
+        }
+
+        .address-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--secondary-color);
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 13px;
+        }
+
+        .table-custom th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        .table-custom td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-custom tr:nth-child(even) {
+            background-color: #FAFAFA;
+        }
+
+        .totals-table {
+            width: 320px;
+            margin-left: auto;
+            font-size: 13px;
+        }
+
+        .totals-table td {
+            padding: 6px 12px;
+        }
+
+        .totals-table .grand-total {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-color);
+            border-top: 2px solid var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .badge-custom {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-success { background-color: #C6F6D5; color: #22543D; }
+        .badge-warning { background-color: #FEFCBF; color: #744210; }
+        .badge-danger { background-color: #FED7D7; color: #742A2A; }
+        .badge-secondary { background-color: #E2E8F0; color: #4A5568; }
+
+        .terms-box {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border-color);
+            font-size: 12px;
+            color: var(--secondary-color);
+        }
+
+        .signature-box {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature-line {
+            width: 200px;
+            border-top: 1px solid var(--secondary-color);
+            text-align: center;
+            padding-top: 6px;
+            font-size: 12px;
+            color: var(--secondary-color);
+        }
+
+        @media print {
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+            .document-actions-bar {
+                display: none !important;
+            }
+            .document-wrapper {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+            }
+        }
+    </style>
+    {% block document_styles %}{% endblock %}
+</head>
+<body>
+
+    <div class="document-actions-bar">
+        <div>
+            <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+            <span class="ms-2 fw-semibold">{{ title }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            {% block action_buttons %}
+            <button onclick="window.print()" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+            {% if pdf_url %}
+            <a href="{{ pdf_url }}" target="_blank" class="btn btn-sm btn-primary">
+                <i class="fas fa-file-pdf me-1"></i> Download PDF
+            </a>
+            {% endif %}
+            {% endblock %}
+        </div>
+    </div>
+
+    <div class="document-wrapper">
+
+        <!-- Header Component -->
+        {% include "documents/components/header.html" %}
+
+        <!-- Content Area -->
+        {% block content %}{% endblock %}
+
+        <!-- Footer / Terms Component -->
+        {% include "documents/components/footer.html" %}
+
+    </div>
+
+</body>
+</html>

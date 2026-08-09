@@ -1,0 +1,76 @@
+{% extends "documents/base_document.html" %}
+
+{% block title %}Invoice #{{ document.invoice_no }}{% endblock %}
+
+{% block doc_type_title %}INVOICE{% endblock %}
+
+{% block content %}
+
+    {% include "documents/components/address_block.html" with customer=document.customer %}
+
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 45%;">Description / Product</th>
+                <th style="width: 15%; text-align: right;">Qty</th>
+                <th style="width: 15%; text-align: right;">Unit Price</th>
+                <th style="width: 20%; text-align: right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in document.items.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                    <strong>{{ item.product.name|default:item.description }}</strong>
+                    {% if item.product and item.description and item.description != item.product.name %}
+                        <br><small class="text-muted">{{ item.description }}</small>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">{{ item.qty }}</td>
+                <td style="text-align: right;">₦{{ item.unit_price|floatformat:2 }}</td>
+                <td style="text-align: right;">₦{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted">No line items in this invoice.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="totals-table">
+        <tr>
+            <td>Subtotal:</td>
+            <td style="text-align: right;">₦{{ document.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% if document.discount and document.discount > 0 %}
+        <tr>
+            <td>Discount:</td>
+            <td style="text-align: right; color: #C53030;">-₦{{ document.discount|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if document.vat and document.vat > 0 %}
+        <tr>
+            <td>VAT / Tax:</td>
+            <td style="text-align: right;">₦{{ document.vat|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        <tr class="grand-total">
+            <td>Total Invoice Amount:</td>
+            <td style="text-align: right;">₦{{ document.total|floatformat:2 }}</td>
+        </tr>
+        {% if total_paid %}
+        <tr>
+            <td>Amount Paid:</td>
+            <td style="text-align: right; color: #2F855A;">₦{{ total_paid|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td><strong>Balance Due:</strong></td>
+            <td style="text-align: right; color: #C53030;"><strong>₦{{ balance_due|floatformat:2 }}</strong></td>
+        </tr>
+        {% endif %}
+    </table>
+
+{% endblock %}
