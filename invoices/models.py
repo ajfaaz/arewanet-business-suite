@@ -244,6 +244,10 @@ class Product(models.Model):
         default=True
     )
 
+    is_stockable = models.BooleanField(
+        default=True
+    )
+
     image = models.ImageField(
         upload_to="products/",
         blank=True,

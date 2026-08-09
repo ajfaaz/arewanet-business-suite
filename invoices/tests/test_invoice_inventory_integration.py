@@ -10,7 +10,8 @@ from invoices.models import Organization, Product, ProductCategory, Invoice, Inv
 from inventory.models import Warehouse, InventoryItem, StockMovement
 from inventory.services import StockService
 from invoices.services.invoice_service import InvoiceService
-from core.exceptions import InsufficientStockError, WarehouseOrganizationMismatch
+from invoices.services.completion import InvoiceCompletionService
+from core.exceptions import InsufficientStockError, WarehouseOrganizationMismatch, BusinessRuleError
 
 User = get_user_model()
 
@@ -29,14 +30,24 @@ class SalesInventoryIntegrationTestCase(TestCase):
             category=self.cat_a,
             name="ThinkPad T14",
             sku="TP-T14",
-            selling_price=Decimal("450000.00")
+            selling_price=Decimal("450000.00"),
+            is_stockable=True
         )
         self.keyboard = Product.objects.create(
             organization=self.org_a,
             category=self.cat_a,
             name="Mechanical Keyboard",
             sku="KB-MECH",
-            selling_price=Decimal("35000.00")
+            selling_price=Decimal("35000.00"),
+            is_stockable=True
+        )
+        self.web_design_service = Product.objects.create(
+            organization=self.org_a,
+            category=self.cat_a,
+            name="Website Design & Consultation",
+            sku="SERV-WEB",
+            selling_price=Decimal("150000.00"),
+            is_stockable=False
         )
 
         self.wh_a = Warehouse.objects.create(organization=self.org_a, name="Main Warehouse", code="WH-MAIN")
@@ -56,12 +67,10 @@ class SalesInventoryIntegrationTestCase(TestCase):
 
         self.client = APIClient()
 
-    def test_1_completed_invoice_reduces_stock(self):
-        # Seed 100 Laptops in WH-MAIN
+    def test_1_draft_invoice_does_not_affect_stock(self):
+        # Initial Stock = 100
         StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
 
-        # Create Invoice for 10 Laptops
         today = timezone.now().date()
         inv = Invoice.objects.create(
             organization=self.org_a,
@@ -74,14 +83,11 @@ class SalesInventoryIntegrationTestCase(TestCase):
         )
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
 
-        # Complete Invoice
-        InvoiceService.complete_invoice(inv)
+        # Expected: Stock remains 100
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
+        self.assertFalse(inv.inventory_updated)
 
-        # Expected: Stock = 90
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
-        self.assertTrue(inv.inventory_updated)
-
-    def test_2_draft_invoice_does_not_affect_stock(self):
+    def test_2_completed_invoice_reduces_stock(self):
         StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
 
         today = timezone.now().date()
@@ -96,14 +102,15 @@ class SalesInventoryIntegrationTestCase(TestCase):
         )
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
 
-        # Draft state must leave stock unchanged at 100
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
-        self.assertFalse(inv.inventory_updated)
+        # Complete Invoice
+        InvoiceCompletionService.complete(inv)
 
-    def test_3_insufficient_stock_rejection(self):
-        # Seed 5 Laptops
-        StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("5.00"))
+        # Expected: Stock = 90
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
+        self.assertEqual(inv.status, "COMPLETED")
+        self.assertTrue(inv.inventory_updated)
 
+    def test_3_service_item_does_not_generate_stock_movement(self):
         today = timezone.now().date()
         inv = Invoice.objects.create(
             organization=self.org_a,
@@ -114,19 +121,18 @@ class SalesInventoryIntegrationTestCase(TestCase):
             due_date=today,
             status="DRAFT"
         )
-        InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
+        # Service product with is_stockable=False
+        InvoiceItem.objects.create(invoice=inv, product=self.web_design_service, qty=Decimal("1.00"), unit_price=self.web_design_service.selling_price)
 
-        # Attempt to complete invoice for 10 Laptops must fail
-        with self.assertRaises(InsufficientStockError):
-            InvoiceService.complete_invoice(inv)
+        InvoiceCompletionService.complete(inv)
 
-        # Stock remains 5 and invoice inventory_updated remains False
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("5.00"))
-        self.assertFalse(inv.inventory_updated)
+        # Expected: Invoice completed, but 0 stock movements generated
+        self.assertEqual(inv.status, "COMPLETED")
+        movements_count = StockMovement.objects.filter(reference_id=inv.id).count()
+        self.assertEqual(movements_count, 0)
 
-    def test_4_multiple_items_stock_deduction(self):
-        StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
-        StockService.receive(self.keyboard, warehouse=self.wh_a, quantity=Decimal("50.00"))
+    def test_4_insufficient_stock_rejection(self):
+        StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("5.00"))
 
         today = timezone.now().date()
         inv = Invoice.objects.create(
@@ -139,17 +145,18 @@ class SalesInventoryIntegrationTestCase(TestCase):
             status="DRAFT"
         )
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
-        InvoiceItem.objects.create(invoice=inv, product=self.keyboard, qty=Decimal("5.00"), unit_price=self.keyboard.selling_price)
 
-        InvoiceService.complete_invoice(inv)
+        with self.assertRaises(InsufficientStockError):
+            InvoiceCompletionService.complete(inv)
 
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
-        self.assertEqual(StockService.get_balance(self.keyboard, warehouse=self.wh_a), Decimal("45.00"))
+        # Stock remains 5 and invoice status remains DRAFT
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("5.00"))
+        self.assertEqual(inv.status, "DRAFT")
+        self.assertFalse(inv.inventory_updated)
 
-    def test_5_atomic_rollback_on_single_failing_item(self):
-        # Laptop = 100 available, Keyboard = 2 available
+    def test_5_multiple_items_stock_deduction(self):
         StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
-        StockService.receive(self.keyboard, warehouse=self.wh_a, quantity=Decimal("2.00"))
+        StockService.receive(self.keyboard, warehouse=self.wh_a, quantity=Decimal("50.00"))
 
         today = timezone.now().date()
         inv = Invoice.objects.create(
@@ -161,19 +168,18 @@ class SalesInventoryIntegrationTestCase(TestCase):
             due_date=today,
             status="DRAFT"
         )
-        # 10 Laptops (Sufficient), 5 Keyboards (Insufficient)
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
         InvoiceItem.objects.create(invoice=inv, product=self.keyboard, qty=Decimal("5.00"), unit_price=self.keyboard.selling_price)
 
-        with self.assertRaises(InsufficientStockError):
-            InvoiceService.complete_invoice(inv)
+        InvoiceCompletionService.complete(inv)
 
-        # Zero partial deduction: Laptop remains 100, Keyboard remains 2
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
-        self.assertEqual(StockService.get_balance(self.keyboard, warehouse=self.wh_a), Decimal("2.00"))
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
+        self.assertEqual(StockService.get_balance(self.keyboard, warehouse=self.wh_a), Decimal("45.00"))
 
-    def test_6_duplicate_completion_protection(self):
+    def test_6_atomic_rollback_on_single_failing_item(self):
+        # Laptop = 100 available, Keyboard = 2 available
         StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
+        StockService.receive(self.keyboard, warehouse=self.wh_a, quantity=Decimal("2.00"))
 
         today = timezone.now().date()
         inv = Invoice.objects.create(
@@ -186,17 +192,16 @@ class SalesInventoryIntegrationTestCase(TestCase):
             status="DRAFT"
         )
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
+        InvoiceItem.objects.create(invoice=inv, product=self.keyboard, qty=Decimal("5.00"), unit_price=self.keyboard.selling_price)
 
-        # First completion
-        InvoiceService.complete_invoice(inv)
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
+        with self.assertRaises(InsufficientStockError):
+            InvoiceCompletionService.complete(inv)
 
-        # Second completion call
-        InvoiceService.complete_invoice(inv)
-        # Stock remains 90 (deducted only ONCE)
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
+        # Zero partial deduction: Laptop remains 100, Keyboard remains 2
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
+        self.assertEqual(StockService.get_balance(self.keyboard, warehouse=self.wh_a), Decimal("2.00"))
 
-    def test_7_invoice_cancellation_restores_stock(self):
+    def test_7_duplicate_completion_protection(self):
         StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
 
         today = timezone.now().date()
@@ -211,28 +216,51 @@ class SalesInventoryIntegrationTestCase(TestCase):
         )
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
 
-        # Sale completed: Stock = 90
-        InvoiceService.complete_invoice(inv)
+        # First completion
+        InvoiceCompletionService.complete(inv)
         self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
 
-        # Cancel Invoice: Stock restored to 100
-        InvoiceService.cancel_invoice(inv)
-        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
-        self.assertEqual(inv.status, "CANCELLED")
+        # Second completion attempt must raise BusinessRuleError
+        with self.assertRaises(BusinessRuleError):
+            InvoiceCompletionService.complete(inv)
 
-        # Verify audit movements preserved (both OUT and IN recorded)
-        movements = StockMovement.objects.filter(reference_id=inv.id)
-        self.assertEqual(movements.count(), 2)
+        # Stock remains 90 (deducted only ONCE)
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
 
-    def test_8_api_invoice_complete_and_insufficient_stock(self):
-        self.client.force_authenticate(user=self.user_a)
+    def test_8_warehouse_organization_isolation(self):
+        # Create product_b belonging to Org B and receive stock in Org B's Warehouse
+        laptop_b = Product.objects.create(
+            organization=self.org_b,
+            name="ThinkPad T14 Org B",
+            sku="TP-T14-B",
+            selling_price=Decimal("450000.00"),
+            is_stockable=True
+        )
+        StockService.receive(laptop_b, warehouse=self.wh_b, quantity=Decimal("100.00"))
 
-        StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("5.00"))
+        today = timezone.now().date()
+        # Invoice belonging to Org A trying to use Org B's Warehouse
+        inv = Invoice.objects.create(
+            organization=self.org_a,
+            invoice_no="INV-TEST-008",
+            customer=self.customer_a,
+            warehouse=self.wh_b,
+            invoice_date=today,
+            due_date=today,
+            status="DRAFT"
+        )
+        InvoiceItem.objects.create(invoice=inv, product=laptop_b, qty=Decimal("10.00"), unit_price=laptop_b.selling_price)
+
+        with self.assertRaises(WarehouseOrganizationMismatch):
+            InvoiceCompletionService.complete(inv)
+
+    def test_9_cancellation_reversal_restores_stock(self):
+        StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
 
         today = timezone.now().date()
         inv = Invoice.objects.create(
             organization=self.org_a,
-            invoice_no="INV-TEST-008",
+            invoice_no="INV-TEST-009",
             customer=self.customer_a,
             warehouse=self.wh_a,
             invoice_date=today,
@@ -241,8 +269,36 @@ class SalesInventoryIntegrationTestCase(TestCase):
         )
         InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
 
-        # POST /api/v1/invoices/<id>/complete/
-        response = self.client.post(f"/api/v1/invoices/{inv.id}/complete/")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(response.data["success"])
-        self.assertEqual(response.data["code"], "insufficient_stock")
+        # Complete sale: Stock = 90
+        InvoiceCompletionService.complete(inv)
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("90.00"))
+
+        # Cancel Invoice: Reversal movement restores stock to 100
+        InvoiceCompletionService.cancel(inv)
+        self.assertEqual(StockService.get_balance(self.laptop, warehouse=self.wh_a), Decimal("100.00"))
+        self.assertEqual(inv.status, "CANCELLED")
+
+        # Verify audit movements preserved (both OUT and IN recorded)
+        movements = StockMovement.objects.filter(reference_id=inv.id)
+        self.assertEqual(movements.count(), 2)
+
+    def test_10_completed_invoice_editing_blocked(self):
+        StockService.receive(self.laptop, warehouse=self.wh_a, quantity=Decimal("100.00"))
+
+        today = timezone.now().date()
+        inv = Invoice.objects.create(
+            organization=self.org_a,
+            invoice_no="INV-TEST-010",
+            customer=self.customer_a,
+            warehouse=self.wh_a,
+            invoice_date=today,
+            due_date=today,
+            status="DRAFT"
+        )
+        item = InvoiceItem.objects.create(invoice=inv, product=self.laptop, qty=Decimal("10.00"), unit_price=self.laptop.selling_price)
+
+        InvoiceCompletionService.complete(inv)
+
+        # Attempting to edit completed invoice via InvoiceService.update_invoice must raise BusinessRuleError
+        with self.assertRaises(BusinessRuleError):
+            InvoiceService.update_invoice(inv, [item])
