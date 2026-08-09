@@ -97,23 +97,66 @@ def invoice_detail(request, pk):
         pk=pk,
         organization=org
     )
-
-    items = invoice.items.all()
-    organization = _get_organization(invoice)
-
+    from core.documents.context_builder import DocumentContextBuilder
     from sales.payments.selectors import PaymentSelectors
-    timeline_events = PaymentSelectors.get_payments_for_timeline(invoice)
 
-    return render(
-        request,
-        'invoices/invoice_detail.html',
-        {
-            'invoice': invoice,
-            'items': items,
-            'organization': organization,
-            'timeline_events': timeline_events,
+    timeline_events = PaymentSelectors.get_payments_for_timeline(invoice)
+    latest_payment = invoice.payments.order_by('-payment_date', '-id').first() if hasattr(invoice, 'payments') else None
+
+    context = DocumentContextBuilder.build(
+        invoice,
+        title=f"Invoice #{invoice.invoice_no}",
+        extra_context={
+            "invoice": invoice,
+            "customer": invoice.customer,
+            "date": invoice.invoice_date,
+            "due_date": invoice.due_date,
+            "doc_type": "INVOICE",
+            "timeline_events": timeline_events,
+            "latest_payment": latest_payment,
+            "total_paid": invoice.total_paid,
+            "balance_due": invoice.balance,
         }
     )
+    return render(request, "documents/invoice/detail.html", context)
+
+
+@login_required
+def invoice_pdf(request, pk):
+    org = _get_user_organization(request.user)
+    invoice = get_object_or_404(
+        Invoice.objects.select_related('customer', 'organization').prefetch_related('items'),
+        pk=pk,
+        organization=org
+    )
+    from core.documents.context_builder import DocumentContextBuilder
+    from django.template.loader import render_to_string
+
+    context = DocumentContextBuilder.build(
+        invoice,
+        title=f"Invoice #{invoice.invoice_no}",
+        extra_context={
+            "invoice": invoice,
+            "customer": invoice.customer,
+            "date": invoice.invoice_date,
+            "due_date": invoice.due_date,
+            "doc_type": "INVOICE",
+            "total_paid": invoice.total_paid,
+            "balance_due": invoice.balance,
+        }
+    )
+    html_content = render_to_string("documents/invoice/detail.html", context, request=request)
+    
+    try:
+        from weasyprint import HTML
+        pdf_file = HTML(string=html_content).write_pdf()
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Invoice_{invoice.invoice_no}.pdf"'
+        return response
+    except Exception:
+        response = HttpResponse(html_content.encode('utf-8'), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Invoice_{invoice.invoice_no}.pdf"'
+        return response
 
 
 @login_required

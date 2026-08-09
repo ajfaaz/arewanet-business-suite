@@ -1,76 +1,66 @@
-{% extends "documents/base_document.html" %}
+{% extends "documents/base.html" %}
+{% load document_tags %}
 
-{% block title %}Invoice #{{ document.invoice_no }}{% endblock %}
+{% block title %}Invoice {{ document_number|default:invoice.invoice_no }}{% endblock %}
 
 {% block doc_type_title %}INVOICE{% endblock %}
 
+{% block action_buttons %}
+    <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-sm btn-outline-secondary me-1">
+        <i class="fas fa-edit me-1"></i> Edit
+    </a>
+    <button onclick="window.print()" class="btn btn-sm btn-outline-primary me-1">
+        <i class="fas fa-print me-1"></i> Print
+    </button>
+    <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn btn-sm btn-primary me-1">
+        <i class="fas fa-file-pdf me-1"></i> Download PDF
+    </a>
+    {% if invoice.status != "PAID" and invoice.balance > 0 %}
+    <a href="{% url 'payment_create' invoice.id %}" class="btn btn-sm btn-success me-1">
+        <i class="fas fa-credit-card me-1"></i> Record Payment
+    </a>
+    {% endif %}
+    {% if latest_payment %}
+    <a href="{% url 'payment_detail' latest_payment.id %}" class="btn btn-sm btn-outline-info">
+        <i class="fas fa-receipt me-1"></i> View Receipt
+    </a>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 
-    {% include "documents/components/address_block.html" with customer=document.customer %}
+    {% include "documents/components/customer_block.html" with customer=invoice.customer %}
 
-    <table class="table-custom">
-        <thead>
-            <tr>
-                <th style="width: 5%;">#</th>
-                <th style="width: 45%;">Description / Product</th>
-                <th style="width: 15%; text-align: right;">Qty</th>
-                <th style="width: 15%; text-align: right;">Unit Price</th>
-                <th style="width: 20%; text-align: right;">Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in document.items.all %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>
-                    <strong>{{ item.product.name|default:item.description }}</strong>
-                    {% if item.product and item.description and item.description != item.product.name %}
-                        <br><small class="text-muted">{{ item.description }}</small>
-                    {% endif %}
-                </td>
-                <td style="text-align: right;">{{ item.qty }}</td>
-                <td style="text-align: right;">₦{{ item.unit_price|floatformat:2 }}</td>
-                <td style="text-align: right;">₦{{ item.total|floatformat:2 }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center text-muted">No line items in this invoice.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% include "documents/components/items_table.html" with document=invoice %}
 
-    <table class="totals-table">
-        <tr>
-            <td>Subtotal:</td>
-            <td style="text-align: right;">₦{{ document.subtotal|floatformat:2 }}</td>
-        </tr>
-        {% if document.discount and document.discount > 0 %}
-        <tr>
-            <td>Discount:</td>
-            <td style="text-align: right; color: #C53030;">-₦{{ document.discount|floatformat:2 }}</td>
-        </tr>
-        {% endif %}
-        {% if document.vat and document.vat > 0 %}
-        <tr>
-            <td>VAT / Tax:</td>
-            <td style="text-align: right;">₦{{ document.vat|floatformat:2 }}</td>
-        </tr>
-        {% endif %}
-        <tr class="grand-total">
-            <td>Total Invoice Amount:</td>
-            <td style="text-align: right;">₦{{ document.total|floatformat:2 }}</td>
-        </tr>
-        {% if total_paid %}
-        <tr>
-            <td>Amount Paid:</td>
-            <td style="text-align: right; color: #2F855A;">₦{{ total_paid|floatformat:2 }}</td>
-        </tr>
-        <tr>
-            <td><strong>Balance Due:</strong></td>
-            <td style="text-align: right; color: #C53030;"><strong>₦{{ balance_due|floatformat:2 }}</strong></td>
-        </tr>
-        {% endif %}
-    </table>
+    <div class="row mt-4">
+        <div class="col-6">
+            <div class="address-box" style="border-left-color: var(--primary-color);">
+                <div class="address-title">PAYMENT SUMMARY</div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Invoice Total:</span>
+                    <strong>{{ invoice.total_due|money }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Amount Paid:</span>
+                    <strong style="color: #2F855A;">{{ invoice.total_paid|money }}</strong>
+                </div>
+                <div class="d-flex justify-content-between pt-2 border-top">
+                    <span><strong>Balance Due:</strong></span>
+                    <strong style="color: {% if invoice.balance > 0 %}#C53030{% else %}#2F855A{% endif %}; font-size: 1.1rem;">
+                        {{ invoice.balance|money }}
+                    </strong>
+                </div>
+                {% if invoice.status == "PAID" or invoice.balance <= 0 %}
+                <div class="mt-2 text-center">
+                    <span class="badge-custom badge-success d-inline-block mt-2">PAID</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-6">
+            {% include "documents/components/totals.html" with document=invoice %}
+        </div>
+    </div>
 
 {% endblock %}

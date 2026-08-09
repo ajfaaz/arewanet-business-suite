@@ -1,4 +1,4 @@
-{% if bank_name or account_number or organization.bank_details %}
+{% if organization.bank_name or organization.account_number or organization.bank_details %}
 <div class="address-box mt-4">
     <div class="address-title">Payment / Bank Details</div>
     <div><strong>Bank:</strong> {{ organization.bank_name|default:"FCMB" }}</div>
