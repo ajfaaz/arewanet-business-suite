@@ -1,22 +1,22 @@
 {% if bank_name or account_number or organization.bank_details %}
 <div class="address-box mt-4">
     <div class="address-title">Payment / Bank Details</div>
-    <div><strong>Bank:</strong> {{ bank_name|default:organization.bank_name|default:"FCMB" }}</div>
-    <div><strong>Account Name:</strong> {{ account_name|default:organization.account_name|default:organization.name }}</div>
-    <div><strong>Account No:</strong> {{ account_number|default:organization.account_number|default:"1032574456" }}</div>
+    <div><strong>Bank:</strong> {{ organization.bank_name|default:"FCMB" }}</div>
+    <div><strong>Account Name:</strong> {{ organization.account_name|default:organization.name }}</div>
+    <div><strong>Account No:</strong> {{ organization.account_number|default:"1032574456" }}</div>
 </div>
 {% endif %}
 
-{% if terms or notes or document.notes or document.terms or organization.terms %}
+{% if document.notes or document.terms or organization.terms %}
 <div class="terms-box">
-    {% if document.notes or notes %}
+    {% if document.notes %}
     <div class="fw-bold mb-1">NOTES</div>
-    <div class="mb-2">{{ document.notes|default:notes }}</div>
+    <div class="mb-2">{{ document.notes }}</div>
     {% endif %}
 
-    {% if document.terms or terms or organization.terms %}
+    {% if document.terms or organization.terms %}
     <div class="fw-bold mb-1">TERMS & CONDITIONS</div>
-    <div>{{ document.terms|default:terms|default:organization.terms }}</div>
+    <div>{{ document.terms|default:organization.terms }}</div>
     {% endif %}
 </div>
 {% endif %}

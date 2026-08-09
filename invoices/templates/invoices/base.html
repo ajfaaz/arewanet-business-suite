@@ -150,6 +150,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{% url 'quotation_list' %}"
+                        class="nav-link {% if 'quotation' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="bi bi-file-earmark-code"></i> Quotations
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{% url 'payment_dashboard' %}"
                         class="nav-link {% if 'payment' in request.resolver_match.url_name or 'receipt' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-cash-stack"></i> Payment Center
