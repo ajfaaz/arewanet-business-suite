@@ -1,0 +1,10 @@
+{% if customer %}
+<div class="customer-box">
+    <div class="customer-title">CUSTOMER</div>
+    <div class="fw-bold fs-6" style="color: var(--primary-color);">{{ customer.company_name }}</div>
+    {% if customer.contact_person %}<div>Attn: {{ customer.contact_person }}</div>{% endif %}
+    {% if customer.address %}<div>{{ customer.address }}</div>{% endif %}
+    {% if customer.phone %}<div>Phone: {{ customer.phone }}</div>{% endif %}
+    {% if customer.email %}<div>Email: {{ customer.email }}</div>{% endif %}
+</div>
+{% endif %}

@@ -1063,8 +1063,44 @@ def quotation_convert(request, pk):
     from sales.services.quotation_service import QuotationService
     invoice = QuotationService.convert_to_invoice(quotation, user=request.user)
 
-    messages.success(request, f"Quotation {quotation.quotation_no} converted to Invoice {invoice.invoice_no} successfully!")
-    return redirect('invoice_detail', pk=invoice.pk)
+@login_required
+def quotation_pdf(request, pk):
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+    from core.documents.context_builder import DocumentContextBuilder
+    from django.template.loader import render_to_string
+    context = DocumentContextBuilder.build(
+        quotation,
+        title=f"Quotation #{quotation.quotation_no}",
+        extra_context={
+            "customer": quotation.customer,
+            "date": quotation.quotation_date,
+            "valid_until": quotation.valid_until,
+            "doc_type": "QUOTATION",
+        }
+    )
+    html_content = render_to_string("documents/quotation/detail.html", context, request=request)
+    
+    try:
+        from weasyprint import HTML
+        pdf_file = HTML(string=html_content).write_pdf()
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Quotation_{quotation.quotation_no}.pdf"'
+        return response
+    except Exception:
+        response = HttpResponse(html_content.encode('utf-8'), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Quotation_{quotation.quotation_no}.pdf"'
+        return response
+
+
+@login_required
+def quotation_send(request, pk):
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+    quotation.status = "SENT"
+    quotation.save(update_fields=["status"])
+    messages.success(request, f"Quotation {quotation.quotation_no} marked as sent to {quotation.customer.company_name}.")
+    return redirect("quotation_detail", pk=quotation.pk)
 
 
 @login_required

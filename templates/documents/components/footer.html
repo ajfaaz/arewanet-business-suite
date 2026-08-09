@@ -7,18 +7,18 @@
 </div>
 {% endif %}
 
-{% if terms or notes or organization.terms %}
+{% if terms or notes or document.notes or document.terms or organization.terms %}
 <div class="terms-box">
-    <div class="fw-bold mb-1">Terms & Conditions / Notes:</div>
-    <div>{{ terms|default:notes|default:organization.terms|default:"Thank you for doing business with us. Goods once sold in good condition are not returnable." }}</div>
+    {% if document.notes or notes %}
+    <div class="fw-bold mb-1">NOTES</div>
+    <div class="mb-2">{{ document.notes|default:notes }}</div>
+    {% endif %}
+
+    {% if document.terms or terms or organization.terms %}
+    <div class="fw-bold mb-1">TERMS & CONDITIONS</div>
+    <div>{{ document.terms|default:terms|default:organization.terms }}</div>
+    {% endif %}
 </div>
 {% endif %}
 
-<div class="signature-box">
-    <div class="signature-line">
-        Prepared By
-    </div>
-    <div class="signature-line">
-        Authorized Signature
-    </div>
-</div>
+{% include "documents/components/signature.html" %}

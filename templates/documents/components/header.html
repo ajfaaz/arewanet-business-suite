@@ -1,23 +1,24 @@
 <div class="document-header row align-items-center">
     <div class="col-7">
         {% if organization.logo %}
-            <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 60px; margin-bottom: 10px;">
+            <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 65px; max-width: 220px; margin-bottom: 12px; object-fit: contain;">
         {% endif %}
-        <div class="org-name">{{ organization.name|default:"ArewaNet Ventures" }}</div>
+        <div class="org-name">{{ organization.name|default:"Organization Name" }}</div>
         <div class="org-details">
             {% if organization.address %}{{ organization.address }}<br>{% endif %}
             {% if organization.phone %}Phone: {{ organization.phone }}{% endif %}
-            {% if organization.email %} | Email: {{ organization.email }}{% endif %}
+            {% if organization.email %}{% if organization.phone %} | {% endif %}Email: {{ organization.email }}{% endif %}
             {% if organization.website %}<br>Website: {{ organization.website }}{% endif %}
         </div>
     </div>
     <div class="col-5 doc-title-box">
         <div class="doc-type-title">{% block doc_type_title %}{{ doc_type|default:"DOCUMENT" }}{% endblock %}</div>
         <div class="doc-number"># {{ document_number }}</div>
-        <div class="text-muted small mt-1">
-            <strong>Date:</strong> {{ date|default:created_at|date:"d M Y" }}
-            {% if due_date %}<br><strong>Due Date:</strong> {{ due_date|date:"d M Y" }}{% endif %}
-            {% if valid_until %}<br><strong>Valid Until:</strong> {{ valid_until|date:"d M Y" }}{% endif %}
+        <div class="text-muted small mt-2">
+            <div><strong>Date:</strong> {{ date|default:created_at|date:"d M Y" }}</div>
+            {% if valid_until %}<div><strong>Valid Until:</strong> {{ valid_until|date:"d M Y" }}</div>{% endif %}
+            {% if due_date %}<div><strong>Due Date:</strong> {{ due_date|date:"d M Y" }}</div>{% endif %}
+            {% if document.salesperson %}<div><strong>Salesperson:</strong> {{ document.salesperson }}</div>{% endif %}
         </div>
         <div class="mt-2">
             <span class="badge-custom {{ status_badge_class }}">{{ status_display }}</span>

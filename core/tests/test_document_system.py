@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
 from django.urls import reverse
 
-from invoices.models import Organization, Product, ProductCategory, Customer, Invoice, Quotation, QuotationItem, Receipt, Payment
+from invoices.models import Organization, Product, ProductCategory, Customer, Invoice, Quotation, QuotationItem, Receipt, Payment, UserProfile
 from inventory.models import Warehouse, GoodsReceivedNote, GoodsIssueNote, StockTransferDocument, StockAdjustmentDocument
 from core.documents.context_builder import DocumentContextBuilder
 from sales.services.quotation_service import QuotationService
@@ -25,6 +25,8 @@ class DocumentSystemTestCase(TestCase):
             address="Kano, Nigeria"
         )
         self.user_a = User.objects.create_user(username="docuser_a", password="password123")
+        UserProfile.objects.create(user=self.user_a, organization=self.org_a, role="ADMIN")
+
         self.customer_a = Customer.objects.create(
             organization=self.org_a,
             company_name="Northern Tech Innovations Ltd",
@@ -44,6 +46,8 @@ class DocumentSystemTestCase(TestCase):
 
         # Org B (Tenant isolation)
         self.org_b = Organization.objects.create(name="Sahara Retail B", slug="sahara-retail-b")
+        self.user_b = User.objects.create_user(username="docuser_b", password="password123")
+        UserProfile.objects.create(user=self.user_b, organization=self.org_b, role="ADMIN")
 
     def test_document_context_builder_status_badges(self):
         qtn = Quotation.objects.create(
@@ -151,16 +155,54 @@ class DocumentSystemTestCase(TestCase):
         self.assertIn("GOODS RECEIVED NOTE", html_grn)
         self.assertIn("Tech Distributors Nigeria", html_grn)
 
-    def test_tenant_isolation_in_branding(self):
-        qtn_b = Quotation.objects.create(
-            organization=self.org_b,
-            customer=Customer.objects.create(organization=self.org_b, company_name="Sahara Client"),
-            subtotal=Decimal("10000.00"),
-            total=Decimal("10000.00")
+    def test_quotation_pdf_endpoint(self):
+        self.client.login(username="docuser_a", password="password123")
+        qtn = Quotation.objects.create(
+            organization=self.org_a,
+            customer=self.customer_a,
+            quotation_date=date.today(),
+            subtotal=Decimal("150000.00"),
+            total=Decimal("150000.00")
         )
-        ctx_b = DocumentContextBuilder.build(qtn_b)
-        html_b = render_to_string("documents/quotation/detail.html", ctx_b)
+        url = reverse('quotation_pdf', kwargs={'pk': qtn.pk})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'application/pdf')
 
-        # Must display Sahara Retail B, NEVER ArewaNet ERP Solutions
-        self.assertIn("Sahara Retail B", html_b)
-        self.assertNotIn("ArewaNet ERP Solutions", html_b)
+    def test_quotation_tenant_isolation(self):
+        qtn_a = Quotation.objects.create(
+            organization=self.org_a,
+            customer=self.customer_a,
+            subtotal=Decimal("50000.00"),
+            total=Decimal("50000.00")
+        )
+        # User B cannot access User A's quotation
+        self.client.login(username="docuser_b", password="password123")
+        url = reverse('quotation_detail', kwargs={'pk': qtn_a.pk})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 404)
+
+    def test_quotation_large_item_set_and_zero_discount_edge_cases(self):
+        qtn = Quotation.objects.create(
+            organization=self.org_a,
+            customer=self.customer_a,
+            subtotal=Decimal("300000.00"),
+            discount=Decimal("0.00"),
+            vat=Decimal("0.00"),
+            total=Decimal("300000.00")
+        )
+        for i in range(1, 35):
+            QuotationItem.objects.create(
+                quotation=qtn,
+                description=f"Hardware Component Model #{i} - Extended Spec Description",
+                qty=Decimal("1.00"),
+                unit_price=Decimal("10000.00"),
+                total=Decimal("10000.00")
+            )
+        ctx = DocumentContextBuilder.build(qtn, extra_context={"customer": qtn.customer, "doc_type": "QUOTATION"})
+        html = render_to_string("documents/quotation/detail.html", ctx)
+
+        self.assertIn("Hardware Component Model #34", html)
+        # Zero discount and tax rows should not appear
+        self.assertNotIn("Discount:", html)
+        self.assertNotIn("Tax / VAT:", html)
