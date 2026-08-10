@@ -413,6 +413,63 @@ def payment_delete(request, pk):
     )
 
 
+def _build_receipt_context(receipt_obj):
+    payment = receipt_obj.payment
+    invoice = payment.invoice if payment else None
+    customer = invoice.customer if invoice else None
+    org = receipt_obj.organization or (invoice.organization if invoice else None)
+
+    previously_paid = Decimal("0.00")
+    invoice_total = Decimal("0.00")
+    balance_remaining = Decimal("0.00")
+
+    if invoice and payment:
+        from invoices.models import Payment as LegacyPayment
+        try:
+            from sales.payments.models import Payment as SalesPayment
+        except ImportError:
+            SalesPayment = None
+
+        invoice_total = invoice.effective_total_due
+        all_payments = list(LegacyPayment.objects.filter(invoice_id=invoice.id))
+        if SalesPayment:
+            all_payments.extend(list(SalesPayment.objects.filter(invoice_id=invoice.id)))
+
+        valid_payments = [
+            p for p in all_payments
+            if getattr(p, 'status', None) not in ('REVERSED', 'REFUNDED', 'FAILED')
+        ]
+        valid_payments.sort(key=lambda p: (
+            getattr(p, 'payment_date', date.today()),
+            p.pk if isinstance(p.pk, int) else str(p.pk)
+        ))
+
+        previously_paid = Decimal("0.00")
+        for p in valid_payments:
+            if str(p.pk) == str(payment.pk):
+                break
+            previously_paid += p.amount
+        balance_remaining = max(Decimal("0.00"), invoice_total - (previously_paid + payment.amount))
+
+    from core.documents.context_builder import DocumentContextBuilder
+    return DocumentContextBuilder.build(
+        receipt_obj,
+        title=f"Receipt #{receipt_obj.receipt_no}",
+        extra_context={
+            "receipt": receipt_obj,
+            "payment": payment,
+            "invoice": invoice,
+            "customer": customer,
+            "organization": org,
+            "date": payment.payment_date if payment else receipt_obj.issued_at,
+            "doc_type": "PAYMENT RECEIPT",
+            "invoice_total": invoice_total,
+            "previously_paid": previously_paid,
+            "balance_remaining": balance_remaining,
+        }
+    )
+
+
 @login_required
 def receipt_detail(request, pk):
     org = _get_user_organization(request.user)
@@ -426,16 +483,8 @@ def receipt_detail(request, pk):
         pk=pk,
         organization=org
     )
-    return render(
-        request,
-        "payments/payment_detail.html",
-        {
-            "receipt": receipt,
-            "payment": receipt.payment,
-            "invoice": receipt.payment.invoice,
-            "organization": receipt.organization or org
-        },
-    )
+    context = _build_receipt_context(receipt)
+    return render(request, "documents/receipt/detail.html", context)
 
 
 @login_required
@@ -445,22 +494,43 @@ def receipt_print(request, pk):
         Receipt.objects.select_related(
             "payment",
             "payment__invoice",
+            "payment__invoice__customer",
             "organization",
         ),
         pk=pk,
         organization=org
     )
+    context = _build_receipt_context(receipt)
+    return render(request, "documents/receipt/detail.html", context)
 
-    return render(
-        request,
-        "payments/receipt_print.html",
-        {
-            "receipt": receipt,
-            "payment": receipt.payment,
-            "invoice": receipt.payment.invoice,
-            "organization": receipt.organization or org
-        },
+
+@login_required
+def receipt_pdf(request, pk):
+    org = _get_user_organization(request.user)
+    receipt = get_object_or_404(
+        Receipt.objects.select_related(
+            "payment",
+            "payment__invoice",
+            "payment__invoice__customer",
+            "organization",
+        ),
+        pk=pk,
+        organization=org
     )
+    from django.template.loader import render_to_string
+    context = _build_receipt_context(receipt)
+    html_content = render_to_string("documents/receipt/detail.html", context, request=request)
+
+    try:
+        from weasyprint import HTML
+        pdf_file = HTML(string=html_content).write_pdf()
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="receipt-{receipt.receipt_no}.pdf"'
+        return response
+    except Exception:
+        response = HttpResponse(html_content.encode('utf-8'), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="receipt-{receipt.receipt_no}.pdf"'
+        return response
 
 
 @login_required

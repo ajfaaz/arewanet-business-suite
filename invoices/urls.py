@@ -105,7 +105,8 @@ urlpatterns = [
     path("payments/<str:pk>/delete/", views.payment_delete, name="payment_delete"),
     path("payments/<int:pk>/", views.payment_detail, name="legacy_payment_detail"),
     path("receipt/<int:pk>/", views.receipt_detail, name="receipt_detail"),
-    path("receipt/<str:pk>/print/", sales_payment_views.receipt_view, name="receipt_print"),
+    path("receipt/<int:pk>/pdf/", views.receipt_pdf, name="receipt_pdf"),
+    path("receipt/<str:pk>/print/", views.receipt_print, name="receipt_print"),
 
     path(
         'quotation/<int:pk>/convert/',

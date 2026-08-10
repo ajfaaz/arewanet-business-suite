@@ -9,6 +9,7 @@ from invoices.models import Organization, Product, ProductCategory, Customer, In
 from inventory.models import Warehouse, GoodsReceivedNote, GoodsIssueNote, StockTransferDocument, StockAdjustmentDocument
 from core.documents.context_builder import DocumentContextBuilder
 from sales.services.quotation_service import QuotationService
+from invoices.views import _build_receipt_context
 
 User = get_user_model()
 
@@ -146,7 +147,7 @@ class DocumentSystemTestCase(TestCase):
         rcpt = getattr(pmt, 'receipt', None) or Receipt.objects.filter(payment=pmt).first()
         if not rcpt:
             rcpt = Receipt.objects.create(organization=self.org_a, payment=pmt, receipt_no="REC-1001")
-        ctx_rcpt = DocumentContextBuilder.build(rcpt, extra_context={"customer": inv.customer, "doc_type": "PAYMENT RECEIPT"})
+        ctx_rcpt = _build_receipt_context(rcpt)
         html_rcpt = render_to_string("documents/receipt/detail.html", ctx_rcpt)
         self.assertIn("PAYMENT RECEIPT", html_rcpt)
         self.assertIn("TRX-1001", html_rcpt)
@@ -300,3 +301,94 @@ class DocumentSystemTestCase(TestCase):
         ctx = DocumentContextBuilder.build(inv, extra_context={"invoice": inv, "customer": inv.customer, "doc_type": "INVOICE"})
         html = render_to_string("documents/invoice/detail.html", ctx)
         self.assertIn("Long Line Item description text for item #34", html)
+
+    def test_receipt_multiple_payments_history_breakdown(self):
+        inv = Invoice.objects.create(
+            organization=self.org_a,
+            customer=self.customer_a,
+            invoice_date=date.today(),
+            due_date=date.today() + timedelta(days=14),
+            subtotal=Decimal("1000000.00"),
+            total_due=Decimal("1000000.00")
+        )
+
+        # Payment 1: 300k
+        p1 = Payment.objects.create(
+            organization=self.org_a,
+            invoice=inv,
+            amount=Decimal("300000.00"),
+            payment_date=date.today(),
+            reference="TRX-MULT-1"
+        )
+        r1 = getattr(p1, 'receipt', None) or Receipt.objects.filter(payment=p1).first()
+        if not r1:
+            r1 = Receipt.objects.create(organization=self.org_a, payment=p1, receipt_no="RCPT-MULT-1")
+
+        ctx1 = _build_receipt_context(r1)
+        self.assertEqual(ctx1["previously_paid"], Decimal("0.00"))
+        self.assertEqual(ctx1["balance_remaining"], Decimal("700000.00"))
+
+        # Payment 2: 400k
+        p2 = Payment.objects.create(
+            organization=self.org_a,
+            invoice=inv,
+            amount=Decimal("400000.00"),
+            payment_date=date.today(),
+            reference="TRX-MULT-2"
+        )
+        r2 = getattr(p2, 'receipt', None) or Receipt.objects.filter(payment=p2).first()
+        if not r2:
+            r2 = Receipt.objects.create(organization=self.org_a, payment=p2, receipt_no="RCPT-MULT-2")
+
+        ctx2 = _build_receipt_context(r2)
+        self.assertEqual(ctx2["previously_paid"], Decimal("300000.00"))
+        self.assertEqual(ctx2["balance_remaining"], Decimal("300000.00"))
+
+        # Payment 3: 300k (Fully Paid)
+        p3 = Payment.objects.create(
+            organization=self.org_a,
+            invoice=inv,
+            amount=Decimal("300000.00"),
+            payment_date=date.today(),
+            reference="TRX-MULT-3"
+        )
+        inv.status = "PAID"
+        inv.save()
+        r3 = getattr(p3, 'receipt', None) or Receipt.objects.filter(payment=p3).first()
+        if not r3:
+            r3 = Receipt.objects.create(organization=self.org_a, payment=p3, receipt_no="RCPT-MULT-3")
+
+        ctx3 = _build_receipt_context(r3)
+        self.assertEqual(ctx3["previously_paid"], Decimal("700000.00"))
+        self.assertEqual(ctx3["balance_remaining"], Decimal("0.00"))
+
+        html3 = render_to_string("documents/receipt/detail.html", ctx3)
+        self.assertIn("FULLY PAID", html3)
+        self.assertIn(r3.receipt_no, html3)
+
+    def test_receipt_pdf_endpoint(self):
+        self.client.login(username="docuser_a", password="password123")
+        inv = Invoice.objects.create(
+            organization=self.org_a,
+            customer=self.customer_a,
+            invoice_date=date.today(),
+            due_date=date.today() + timedelta(days=14),
+            subtotal=Decimal("150000.00"),
+            total_due=Decimal("150000.00")
+        )
+        pmt = Payment.objects.create(
+            organization=self.org_a,
+            invoice=inv,
+            amount=Decimal("150000.00"),
+            payment_date=date.today(),
+            reference="TRX-PDF-1"
+        )
+        rcpt = getattr(pmt, 'receipt', None) or Receipt.objects.filter(payment=pmt).first()
+        if not rcpt:
+            rcpt = Receipt.objects.create(organization=self.org_a, payment=pmt, receipt_no="RCPT-PDF-1")
+
+        url = reverse('receipt_pdf', kwargs={'pk': rcpt.pk})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'application/pdf')
+        self.assertIn(f"receipt-{rcpt.receipt_no}.pdf", res['Content-Disposition'])
