@@ -73,6 +73,13 @@ PERMISSION_DEFINITIONS = [
     {"code": "report.inventory", "name": "View Inventory Reports", "module": "report", "action": "inventory", "description": "Access stock analytics"},
     {"code": "report.finance", "name": "View Financial Reports", "module": "report", "action": "finance", "description": "Access financial statements and reports"},
 
+    # --- Quotation Templates ---
+    {"code": "quotation_template.view", "name": "View Quotation Templates", "module": "quotation_template", "action": "view", "description": "Can view quotation template gallery and details"},
+    {"code": "quotation_template.create", "name": "Create Quotation Templates", "module": "quotation_template", "action": "create", "description": "Can create new quotation templates"},
+    {"code": "quotation_template.edit", "name": "Edit Quotation Templates", "module": "quotation_template", "action": "edit", "description": "Can edit existing quotation templates"},
+    {"code": "quotation_template.delete", "name": "Delete Quotation Templates", "module": "quotation_template", "action": "delete", "description": "Can delete quotation templates"},
+    {"code": "quotation_template.set_default", "name": "Set Default Quotation Template", "module": "quotation_template", "action": "set_default", "description": "Can set default template for organization"},
+
     # --- Administration ---
     {"code": "organization.view", "name": "View Organization Settings", "module": "organization", "action": "view", "description": "View organization profile"},
     {"code": "organization.edit", "name": "Edit Organization Settings", "module": "organization", "action": "edit", "description": "Update organization profile and settings"},
@@ -88,7 +95,7 @@ PERMISSION_DEFINITIONS = [
 
 ROLE_SYSTEM_PERMISSIONS = {
     "accountant": [
-        "customer.view", "supplier.view", "quotation.view",
+        "customer.view", "supplier.view", "quotation.view", "quotation_template.view",
         "invoice.view", "invoice.create", "invoice.edit",
         "payment.view", "payment.create", "payment.edit",
         "receipt.view", "receipt.create",
@@ -96,7 +103,7 @@ ROLE_SYSTEM_PERMISSIONS = {
     ],
     "sales-officer": [
         "customer.view", "customer.create", "customer.edit",
-        "quotation.view", "quotation.create", "quotation.edit",
+        "quotation.view", "quotation.create", "quotation.edit", "quotation_template.view",
         "invoice.view", "invoice.create", "invoice.edit",
         "payment.view", "receipt.view", "receipt.create"
     ],

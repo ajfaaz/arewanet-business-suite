@@ -1,5 +1,5 @@
 from django import forms
-from .models import Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product, Quotation, QuotationItem
+from .models import Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product, Quotation, QuotationItem, QuotationTemplate
 from django.forms import inlineformset_factory
 
 class InvoiceForm(forms.ModelForm):
@@ -290,3 +290,62 @@ class ProductForm(forms.ModelForm):
             product.save()
 
         return product
+
+
+class QuotationTemplateForm(forms.ModelForm):
+
+    class Meta:
+        model = QuotationTemplate
+        fields = [
+            "name",
+            "description",
+            "style",
+            "is_active",
+            "is_default",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Modern Corporate Template"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Optional description for this template"}),
+            "style": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.organization = kwargs.pop("organization", None)
+        super().__init__(*args, **kwargs)
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name")
+        if name and self.organization:
+            qs = QuotationTemplate.objects.filter(
+                organization=self.organization,
+                name__iexact=name
+            )
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("A template with this name already exists in your organization.")
+        return name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        is_active = cleaned_data.get("is_active")
+        is_default = cleaned_data.get("is_default")
+
+        if is_default and not is_active:
+            raise forms.ValidationError("A default template must be set to Active.")
+
+        if self.instance and self.instance.pk and self.instance.is_default and not is_active:
+            raise forms.ValidationError("Cannot deactivate the current default template until another active template is set as default.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.organization:
+            instance.organization = self.organization
+        if commit:
+            instance.save()
+        return instance
+

@@ -187,6 +187,15 @@ urlpatterns = [
     path('quotation/<int:pk>/convert-to-invoice/', views.quotation_convert, name='quotation_convert_to_invoice'),
     path('quotation/<int:pk>/delete/', views.quotation_delete, name='quotation_delete'),
 
+    # Quotation Templates CRUD
+    path('quotation-templates/', views.quotation_template_list, name='quotation_template_list'),
+    path('quotation-templates/create/', views.quotation_template_create, name='quotation_template_create'),
+    path('quotation-templates/<int:pk>/edit/', views.quotation_template_edit, name='quotation_template_edit'),
+    path('quotation-templates/<int:pk>/set-default/', views.quotation_template_set_default, name='quotation_template_set_default'),
+    path('quotation-templates/<int:pk>/toggle-active/', views.quotation_template_toggle_active, name='quotation_template_toggle_active'),
+    path('quotation-templates/<int:pk>/delete/', views.quotation_template_delete, name='quotation_template_delete'),
+
+
     # Credit Notes
     path('credit-notes/', sales_views.credit_note_list, name='credit_note_list'),
     path('credit-notes/create/', sales_views.credit_note_create, name='credit_note_create'),

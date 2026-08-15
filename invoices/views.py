@@ -10,9 +10,12 @@ from django.db.models import Sum, Q
 from django.core.mail import EmailMessage
 from django.contrib import messages
 
-from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product, OrganizationMembership
-from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm, QuotationForm, QuotationItemFormSet
+from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product, OrganizationMembership, QuotationTemplate
+from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm, QuotationForm, QuotationItemFormSet, QuotationTemplateForm
+from .permissions import require_permission
+from .services.quotation_template_service import QuotationTemplateService
 from .utils.pdf_generator import generate_invoice_pdf
+
 
 
 def user_logout(request):
@@ -1288,3 +1291,133 @@ def quotation_delete(request, pk):
         'products/product_confirm_delete.html',
         {'object': quotation, 'type': 'Quotation'}
     )
+
+
+@login_required
+@require_permission("quotation_template.view")
+def quotation_template_list(request):
+    org = _get_user_organization(request.user)
+    service = QuotationTemplateService(organization=org)
+    templates = service.get_templates(include_inactive=True)
+
+    return render(
+        request,
+        "quotation_templates/list.html",
+        {
+            "templates": templates,
+            "organization": org,
+        }
+    )
+
+
+@login_required
+@require_permission("quotation_template.create")
+def quotation_template_create(request):
+    org = _get_user_organization(request.user)
+
+    if request.method == "POST":
+        form = QuotationTemplateForm(request.POST, organization=org)
+        if form.is_valid():
+            template = form.save()
+            messages.success(request, f"Quotation template '{template.name}' created successfully.")
+            return redirect("quotation_template_list")
+    else:
+        form = QuotationTemplateForm(organization=org)
+
+    return render(
+        request,
+        "quotation_templates/form.html",
+        {
+            "form": form,
+            "title": "New Quotation Template",
+            "button_text": "Create Template",
+        }
+    )
+
+
+@login_required
+@require_permission("quotation_template.edit")
+def quotation_template_edit(request, pk):
+    org = _get_user_organization(request.user)
+    template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
+    if request.method == "POST":
+        form = QuotationTemplateForm(request.POST, instance=template, organization=org)
+        if form.is_valid():
+            template = form.save()
+            messages.success(request, f"Quotation template '{template.name}' updated successfully.")
+            return redirect("quotation_template_list")
+    else:
+        form = QuotationTemplateForm(instance=template, organization=org)
+
+    return render(
+        request,
+        "quotation_templates/form.html",
+        {
+            "form": form,
+            "template": template,
+            "title": f"Edit Template — {template.name}",
+            "button_text": "Save Changes",
+        }
+    )
+
+
+@login_required
+@require_permission("quotation_template.set_default")
+def quotation_template_set_default(request, pk):
+    org = _get_user_organization(request.user)
+    template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
+    if not template.is_active:
+        messages.error(request, "An inactive template cannot be designated as default.")
+        return redirect("quotation_template_list")
+
+    service = QuotationTemplateService(organization=org)
+    service.set_default_template(template.id)
+
+    messages.success(request, f"'{template.name}' is now the default quotation template for {org.name}.")
+    return redirect("quotation_template_list")
+
+
+@login_required
+@require_permission("quotation_template.edit")
+def quotation_template_toggle_active(request, pk):
+    org = _get_user_organization(request.user)
+    template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
+    if template.is_default and template.is_active:
+        messages.error(request, "Cannot deactivate the active default template. Designate another active template as default first.")
+        return redirect("quotation_template_list")
+
+    template.is_active = not template.is_active
+    template.save(update_fields=["is_active", "updated_at"])
+
+    status_str = "activated" if template.is_active else "deactivated"
+    messages.success(request, f"Quotation template '{template.name}' has been {status_str}.")
+    return redirect("quotation_template_list")
+
+
+@login_required
+@require_permission("quotation_template.delete")
+def quotation_template_delete(request, pk):
+    org = _get_user_organization(request.user)
+    template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
+    if template.is_default:
+        messages.error(request, "Cannot delete the default template. Set another template as default before deleting.")
+        return redirect("quotation_template_list")
+
+    if request.method == "POST":
+        name = template.name
+        template.delete()
+        messages.success(request, f"Quotation template '{name}' deleted successfully.")
+        return redirect("quotation_template_list")
+
+    return render(
+        request,
+        "quotation_templates/confirm_delete.html",
+        {
+            "template": template,
+        }
+    )
+

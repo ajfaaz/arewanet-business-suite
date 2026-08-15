@@ -17,6 +17,13 @@ MENU_SECTIONS = [
                 "url_match": "quotation",
             },
             {
+                "label": "Quotation Templates",
+                "url_name": "quotation_template_list",
+                "icon": "bi-layout-text-window-reverse",
+                "permission": "quotation_template.view",
+                "url_match": "quotation_template",
+            },
+            {
                 "label": "Invoices",
                 "url_name": "invoice_list",
                 "icon": "bi-file-earmark-text",
