@@ -2,8 +2,8 @@
 
 {% block content %}
 <div class="container-fluid p-4">
-    <!-- Welcome Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <!-- Welcome Header & Period Filter -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
         <div>
             <h3 class="fw-bold text-dark mb-1">
                 Good afternoon, {{ request.user.first_name|default:request.user.username }}
@@ -13,15 +13,23 @@
                 {% if role %}<span class="badge bg-secondary ms-2">{{ role.name }}</span>{% endif %}
             </p>
         </div>
-        <div>
+        <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+            <!-- Period Filter Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm" type="button" id="periodDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-calendar-event me-1"></i> Period: <strong class="text-dark">{{ analytics.period|title }}</strong>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="periodDropdown">
+                    <li><a class="dropdown-item {% if analytics.period == 'today' %}active{% endif %}" href="?period=today">Today</a></li>
+                    <li><a class="dropdown-item {% if analytics.period == 'week' %}active{% endif %}" href="?period=week">This Week</a></li>
+                    <li><a class="dropdown-item {% if analytics.period == 'month' %}active{% endif %}" href="?period=month">This Month</a></li>
+                    <li><a class="dropdown-item {% if analytics.period == 'year' %}active{% endif %}" href="?period=year">This Year</a></li>
+                </ul>
+            </div>
+
             {% if kpis.show_invoices %}
-            <a href="{% url 'invoice_create' %}" class="btn btn-primary btn-sm shadow-sm me-2">
+            <a href="{% url 'invoice_create' %}" class="btn btn-primary btn-sm shadow-sm">
                 <i class="bi bi-plus-lg me-1"></i> New Invoice
-            </a>
-            {% endif %}
-            {% if kpis.show_customers %}
-            <a href="{% url 'customer_create' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
-                <i class="bi bi-person-plus me-1"></i> New Customer
             </a>
             {% endif %}
         </div>
@@ -29,40 +37,6 @@
 
     <!-- Quick Actions Component -->
     {% include 'dashboard/components/quick_actions.html' %}
-
-    <!-- Developer Permission Debug Summary Panel (Dev / Superuser Only) -->
-    {% if user.is_superuser or debug %}
-    <div class="accordion mb-4" id="devPermissionAccordion">
-        <div class="accordion-item border-secondary">
-            <h2 class="accordion-header" id="headingDevPerm">
-                <button class="accordion-button collapsed py-2 bg-light text-secondary text-xs fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDevPerm" aria-expanded="false" aria-controls="collapseDevPerm">
-                    <i class="bi bi-bug me-2"></i> Developer Permission Summary (Debug Mode)
-                </button>
-            </h2>
-            <div id="collapseDevPerm" class="accordion-collapse collapse" aria-labelledby="headingDevPerm" data-bs-parent="#devPermissionAccordion">
-                <div class="accordion-body bg-dark text-light text-xs font-monospace">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <strong>Active Organization:</strong> {{ organization.name }} (ID: {{ organization.id }})<br>
-                            <strong>Active Role:</strong> {{ role.name|default:"Superuser / No Role" }}
-                        </div>
-                        <div class="col-md-8">
-                            <strong>Evaluated Permissions:</strong>
-                            <div class="d-flex flex-wrap gap-2 mt-1">
-                                <span class="badge {% if kpis.show_customers %}bg-success{% else %}bg-danger{% endif %}">customer.view</span>
-                                <span class="badge {% if kpis.show_quotations %}bg-success{% else %}bg-danger{% endif %}">quotation.view</span>
-                                <span class="badge {% if kpis.show_invoices %}bg-success{% else %}bg-danger{% endif %}">invoice.view</span>
-                                <span class="badge {% if kpis.show_payments %}bg-success{% else %}bg-danger{% endif %}">payment.view</span>
-                                <span class="badge {% if kpis.show_products %}bg-success{% else %}bg-danger{% endif %}">product.view</span>
-                                <span class="badge {% if kpis.show_suppliers %}bg-success{% else %}bg-danger{% endif %}">supplier.view</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Permission-Aware Primary KPI Stat Cards Row -->
     <div class="row mb-4">
@@ -80,23 +54,60 @@
         {% endif %}
     </div>
 
-    <!-- Permission-Aware Secondary Metrics Row -->
+    <!-- Analytics & BI Row 1: Sales Trend & Receivables -->
+    {% if kpis.show_invoices %}
+    <div class="row mb-4">
+        <div class="col-lg-7 mb-4 mb-lg-0">
+            {% include 'dashboard/components/sales_trend_chart.html' %}
+        </div>
+        <div class="col-lg-5">
+            {% include 'dashboard/components/outstanding_receivables.html' %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Analytics & BI Row 2: Low Stock & Pending Approvals -->
     <div class="row mb-4">
         {% if kpis.show_products %}
-        {% include 'dashboard/components/stat_card.html' with title="Products & Services" value=kpis.products.total_count subtitle=kpis.products.low_stock_count|add:" Low Stock Items" icon="box-seam" color="secondary" %}
-        {% include 'dashboard/components/stat_card.html' with title="Stock Value" value=kpis.products.stock_value subtitle="Total Catalog Inventory Value" icon="tags" color="success" %}
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            {% include 'dashboard/components/low_stock_widget.html' %}
+        </div>
         {% endif %}
-
-        {% if kpis.show_suppliers %}
-        {% include 'dashboard/components/stat_card.html' with title="Active Suppliers" value=kpis.suppliers.formatted_count subtitle="Procurement Network" icon="truck" color="dark" %}
-        {% endif %}
-
-        {% if kpis.show_quotations %}
-        {% include 'dashboard/components/stat_card.html' with title="Sales Quotations" value=kpis.quotations.total_count subtitle=kpis.quotations.pending_count|add:" Pending Conversion" icon="file-earmark-code" color="info" %}
-        {% endif %}
+        <div class="col-lg-{% if kpis.show_products %}6{% else %}12{% endif %}">
+            {% include 'dashboard/components/pending_approvals.html' %}
+        </div>
     </div>
 
-    <!-- Recent Activity Tables Component -->
-    {% include 'dashboard/components/recent_activity.html' %}
+    <!-- Recent Normalized Activity Timeline Component -->
+    <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 fw-bold text-dark"><i class="bi bi-clock-history me-2"></i>Normalized Recent Activity Timeline</h6>
+        </div>
+        <div class="card-body p-0">
+            {% if analytics.activity_timeline %}
+            <div class="list-group list-group-flush text-sm">
+                {% for item in analytics.activity_timeline %}
+                <div class="list-group-item d-flex justify-content-between align-items-center px-4 py-3 border-bottom-0">
+                    <div class="d-flex align-items-center">
+                        <i class="{{ item.icon }} fs-4 me-3"></i>
+                        <div>
+                            <a href="{{ item.url }}" class="fw-bold text-dark text-decoration-none d-block mb-1">{{ item.title }}</a>
+                            <small class="text-muted"><i class="bi bi-building me-1"></i>{{ item.customer }}</small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="fw-bold text-dark d-block">{{ item.amount }}</span>
+                        <small class="text-muted" style="font-size: 0.75rem;">{{ item.date }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <small>No recent activity recorded.</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endblock %}

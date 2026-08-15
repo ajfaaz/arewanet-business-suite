@@ -1,0 +1,24 @@
+<div class="card shadow-sm border-0 rounded-3 h-100">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Sales & Revenue Trend</h6>
+        <span class="badge bg-light text-dark border">{{ analytics.period|title }}</span>
+    </div>
+    <div class="card-body">
+        {% if analytics.sales_trend %}
+        <div class="d-flex align-items-end justify-content-between pt-4 pb-2" style="height: 180px;">
+            {% for bar in analytics.sales_trend %}
+            <div class="d-flex flex-column align-items-center flex-grow-1 mx-1" style="height: 100%;">
+                <div class="w-100 bg-primary bg-gradient rounded-top text-center text-white text-xs d-flex align-items-end justify-content-center pb-1 shadow-sm" style="height: {{ bar.height_pct }}%; min-height: 12px; transition: height 0.3s ease;" title="{{ bar.date }}: {{ bar.amount }}">
+                </div>
+                <small class="text-muted text-xs mt-2 text-truncate" style="font-size: 0.7rem;">{{ bar.date }}</small>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-bar-chart fs-1 opacity-25 d-block mb-2"></i>
+            <small>No invoice sales recorded for this period.</small>
+        </div>
+        {% endif %}
+    </div>
+</div>

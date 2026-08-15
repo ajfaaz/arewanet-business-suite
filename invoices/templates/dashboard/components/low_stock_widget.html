@@ -1,0 +1,35 @@
+<div class="card shadow-sm border-0 rounded-3 h-100">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-box-seam text-danger me-2"></i>Low Stock Alerts</h6>
+        <a href="{% url 'product_list' %}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+    </div>
+    <div class="card-body p-0">
+        {% if analytics.low_stock %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Reorder Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in analytics.low_stock %}
+                    <tr>
+                        <td class="fw-bold text-dark">{{ item.name }}</td>
+                        <td><code class="text-secondary">{{ item.sku }}</code></td>
+                        <td><span class="badge bg-danger">{{ item.reorder_level }} {{ item.unit }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-check2-circle text-success fs-2 d-block mb-1"></i>
+            <small>All inventory stock levels are healthy.</small>
+        </div>
+        {% endif %}
+    </div>
+</div>

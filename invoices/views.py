@@ -79,13 +79,15 @@ def _check_permission(user, allowed_roles):
 def dashboard(request):
     org = getattr(request, 'organization', None) or _get_user_organization(request.user)
     membership = getattr(request, 'membership', None)
+    period = request.GET.get('period', 'month')
     from invoices.services.dashboard_service import DashboardService
     service = DashboardService(organization=org)
-    dashboard_data = service.get_dashboard_data(membership=membership)
+    dashboard_data = service.get_dashboard_data(membership=membership, period=period)
 
     context = {
         'kpis': dashboard_data['kpis'],
         'actions': dashboard_data.get('actions', {}),
+        'analytics': dashboard_data.get('analytics', {}),
         'recent_activity': dashboard_data['recent_activity'],
         'customer_count': dashboard_data['kpis'].get('customers', {}).get('count', 0),
         'supplier_count': dashboard_data['kpis'].get('suppliers', {}).get('count', 0),

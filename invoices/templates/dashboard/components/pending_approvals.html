@@ -1,0 +1,40 @@
+<div class="card shadow-sm border-0 rounded-3 h-100">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-hourglass-split text-info me-2"></i>Pending Approvals & Workflows</h6>
+        <span class="badge bg-info text-dark fw-bold">{{ analytics.pending_approvals.total }}</span>
+    </div>
+    <div class="card-body">
+        <div class="row text-center g-2">
+            <div class="col-6">
+                <div class="p-3 border rounded bg-light">
+                    <h4 class="fw-bold mb-0 text-dark">{{ analytics.pending_approvals.quotations }}</h4>
+                    <small class="text-muted text-xs">Pending Quotations</small>
+                    <div class="mt-2">
+                        <a href="{% url 'quotation_list' %}" class="btn btn-xs btn-outline-info text-xs py-0 px-2">Review</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 border rounded bg-light">
+                    <h4 class="fw-bold mb-0 text-dark">{{ analytics.pending_approvals.invoices }}</h4>
+                    <small class="text-muted text-xs">Draft Invoices</small>
+                    <div class="mt-2">
+                        <a href="{% url 'invoice_list' %}" class="btn btn-xs btn-outline-primary text-xs py-0 px-2">Review</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 mt-2">
+                <div class="p-3 border rounded bg-light opacity-50">
+                    <h4 class="fw-bold mb-0 text-dark">{{ analytics.pending_approvals.grns }}</h4>
+                    <small class="text-muted text-xs">Pending GRNs (Soon)</small>
+                </div>
+            </div>
+            <div class="col-6 mt-2">
+                <div class="p-3 border rounded bg-light opacity-50">
+                    <h4 class="fw-bold mb-0 text-dark">{{ analytics.pending_approvals.gins }}</h4>
+                    <small class="text-muted text-xs">Pending GINs (Soon)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
