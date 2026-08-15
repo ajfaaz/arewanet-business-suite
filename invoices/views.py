@@ -66,13 +66,34 @@ def _get_user_organization(user):
 get_user_organization = _get_user_organization
 
 
-def _check_permission(user, allowed_roles):
-    if not hasattr(user, 'userprofile'):
-        if user.is_superuser:
+def _check_permission(user, allowed_roles, request=None):
+    if user.is_superuser:
+        return
+
+    membership = getattr(request, 'membership', None) if request else None
+    if not membership and hasattr(user, 'organization_memberships'):
+        membership = user.organization_memberships.filter(is_active=True).first()
+
+    if membership and membership.is_active:
+        if membership.role and membership.role.slug == 'administrator':
             return
-        raise PermissionDenied
-    if user.userprofile.role not in allowed_roles:
-        raise PermissionDenied
+        if isinstance(allowed_roles, str):
+            norm = allowed_roles.replace('_', '.')
+            if membership.has_permission(norm) or membership.has_permission(allowed_roles):
+                return
+        elif isinstance(allowed_roles, (list, tuple)):
+            if membership.role and (membership.role.slug in [r.lower().replace(' ', '-') for r in allowed_roles] or membership.role.name.upper() in [r.upper() for r in allowed_roles]):
+                return
+            for code in allowed_roles:
+                norm = str(code).replace('_', '.')
+                if membership.has_permission(norm) or membership.has_permission(str(code)):
+                    return
+
+    if hasattr(user, 'userprofile') and user.userprofile.role in allowed_roles:
+        return
+
+    raise PermissionDenied("Unauthorized access attempt.")
+
 
 
 @login_required

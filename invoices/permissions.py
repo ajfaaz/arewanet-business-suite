@@ -117,3 +117,42 @@ ROLE_SYSTEM_PERMISSIONS = {
         "report.purchase"
     ],
 }
+
+
+from functools import wraps
+from django.core.exceptions import PermissionDenied
+
+
+def require_permission(permission_code):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                from django.contrib.auth.views import redirect_to_login
+                return redirect_to_login(request.get_full_path())
+
+            if request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+
+            membership = getattr(request, 'membership', None)
+            if not membership and hasattr(request.user, 'organization_memberships'):
+                active_org_id = request.session.get('active_organization_id')
+                if active_org_id:
+                    membership = request.user.organization_memberships.filter(organization_id=active_org_id, is_active=True).first()
+                if not membership:
+                    membership = request.user.organization_memberships.filter(is_active=True).first()
+
+            if not membership or not membership.is_active:
+                raise PermissionDenied("You do not have an active organization membership.")
+
+            if membership.role and membership.role.slug == 'administrator':
+                return view_func(request, *args, **kwargs)
+
+            normalized_code = permission_code.replace('_', '.')
+            if membership.has_permission(normalized_code) or membership.has_permission(permission_code):
+                return view_func(request, *args, **kwargs)
+
+            raise PermissionDenied(f"You do not have the required permission ({permission_code}) to access this page.")
+        return _wrapped_view
+    return decorator
+

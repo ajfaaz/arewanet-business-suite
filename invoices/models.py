@@ -935,3 +935,80 @@ class ActivityLog(models.Model):
         return f"{self.user} - {self.action} at {self.created_at}"
 
 
+class QuotationTemplate(models.Model):
+
+    STYLE_CHOICES = (
+        ('modern', 'Modern'),
+        ('classic', 'Classic'),
+        ('minimal', 'Minimal'),
+    )
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='quotation_templates'
+    )
+
+    name = models.CharField(
+        max_length=150
+    )
+
+    slug = models.SlugField(
+        max_length=180,
+        blank=True
+    )
+
+    description = models.TextField(
+        blank=True
+    )
+
+    style = models.CharField(
+        max_length=30,
+        choices=STYLE_CHOICES,
+        default='modern'
+    )
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = ['-is_default', 'name']
+        unique_together = ('organization', 'slug')
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            base_slug = slugify(self.name) or "template"
+            slug = base_slug
+            counter = 1
+            while QuotationTemplate.objects.filter(organization=self.organization, slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+
+        if self.is_default:
+            QuotationTemplate.objects.filter(
+                organization=self.organization,
+                is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.organization.name})"
+
+
+
