@@ -3,8 +3,7 @@ from datetime import date
 from django.urls import reverse
 from django.contrib.auth.models import User
 from invoices.forms import InvoiceForm
-from invoices.models import Invoice, Customer, Organization, InvoiceItem
-from sales.payments.models import Payment
+from invoices.models import Invoice, Customer, Organization, InvoiceItem, Payment, Receipt
 
 
 class InvoiceFormTest(TestCase):
@@ -202,7 +201,6 @@ class InvoiceViewsTest(TestCase):
 
     def test_payment_workflow_auto_status_and_receipt(self):
         from decimal import Decimal
-        from sales.payments.models import Payment
 
         self.invoice.total_due = Decimal('100000.00')
         self.invoice.status = 'UNPAID'
@@ -247,7 +245,6 @@ class InvoiceViewsTest(TestCase):
 
     def test_payment_crud_operations(self):
         from decimal import Decimal
-        from sales.payments.models import Payment
 
         self.invoice.total_due = Decimal('50000.00')
         self.invoice.save()
@@ -273,6 +270,7 @@ class InvoiceViewsTest(TestCase):
 
         # Receipt print
         res_rcpt = self.client.get(reverse('receipt_print', kwargs={'pk': payment.receipt.pk}))
+        self.assertEqual(res_rcpt.status_code, 200)
         self.assertEqual(res_rcpt.status_code, 200)
 
         # Update payment

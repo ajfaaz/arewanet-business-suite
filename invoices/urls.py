@@ -14,8 +14,14 @@ urlpatterns = [
 
     path(
         'logout/',
-        auth_views.LogoutView.as_view(next_page='login'),
+        views.user_logout,
         name='logout'
+    ),
+
+    path(
+        'organization/switch/',
+        views.switch_organization,
+        name='switch_organization'
     ),
 
     path(
@@ -94,7 +100,7 @@ urlpatterns = [
     path("payments/", sales_payment_views.payment_dashboard, name="payment_dashboard"),
     path("payments/list/", sales_payment_views.payment_list, name="payment_list"),
     path("payments/receive/", sales_payment_views.receive_payment, name="receive_payment"),
-    path("payments/create/<int:invoice_id>/", sales_payment_views.receive_payment, name="payment_create"),
+    path("payments/create/<int:invoice_id>/", views.payment_create, name="payment_create"),
     path("payments/receive/invoice/<int:invoice_id>/", sales_payment_views.receive_payment, name="receive_invoice_payment"),
     path("payments/multi-invoice/", sales_payment_views.multi_invoice_payment, name="multi_invoice_payment"),
     path("payments/<str:pk>/", sales_payment_views.payment_detail, name="payment_detail"),

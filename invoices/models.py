@@ -289,9 +289,6 @@ class Product(models.Model):
     def is_active(self):
         return self.active
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         ordering = ["name"]
 
@@ -300,12 +297,6 @@ class Product(models.Model):
 
 
 class Invoice(models.Model):
-
-    STATUS_CHOICES = (
-        ('PAID', 'Paid'),
-        ('UNPAID', 'Unpaid'),
-        ('OVERDUE', 'Overdue'),
-    )
 
     organization = models.ForeignKey(
         Organization,
@@ -825,6 +816,106 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
+
+
+class Permission(models.Model):
+    code = models.CharField(max_length=150, unique=True)
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+
+    module = models.CharField(max_length=100)
+    action = models.CharField(max_length=50)
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["module", "action", "name"]
+
+    def __str__(self):
+        return self.code
+
+
+class Role(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100)
+
+    description = models.TextField(blank=True)
+
+    permissions = models.ManyToManyField(
+        Permission,
+        blank=True,
+        related_name="roles",
+    )
+
+    is_system_role = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug"],
+                name="unique_role_slug",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class OrganizationMembership(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="organization_memberships",
+    )
+
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.PROTECT,
+        related_name="memberships",
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "user"],
+                name="unique_organization_membership",
+            ),
+        ]
+        verbose_name = "Organization Membership"
+        verbose_name_plural = "Organization Memberships"
+
+    def __str__(self):
+        return f"{self.user} - {self.organization.name} - {self.role.name}"
+
+    def has_permission(self, permission_code):
+        if not self.is_active:
+            return False
+
+        if not self.role or not self.role.is_active:
+            return False
+
+        return self.role.permissions.filter(
+            code=permission_code,
+            is_active=True,
+        ).exists()
 
 class ActivityLog(models.Model):
     user = models.ForeignKey(

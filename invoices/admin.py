@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Organization, Customer, Invoice, InvoiceItem, 
-    Quotation, Receipt, UserProfile, ActivityLog
+    Quotation, Receipt, UserProfile, ActivityLog, OrganizationMembership, Role, Permission
 )
 
 # --- 1. Inline Tabular Frameworks ---
@@ -16,6 +16,64 @@ class OrganizationAdmin(admin.ModelAdmin):
     list_display = ('name', 'email', 'phone', 'invoice_prefix', 'currency', 'created_at')
     search_fields = ('name', 'email', 'invoice_prefix')
     prepopulated_fields = {'slug': ('name',)} # Automatically populates slug from name while typing!
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "name",
+        "module",
+        "action",
+        "is_active",
+    )
+    list_filter = (
+        "module",
+        "action",
+        "is_active",
+    )
+    search_fields = (
+        "code",
+        "name",
+    )
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "slug",
+        "is_system_role",
+        "is_active",
+    )
+    list_filter = (
+        "is_system_role",
+        "is_active",
+    )
+    search_fields = (
+        "name",
+        "slug",
+    )
+    filter_horizontal = ("permissions",)
+
+@admin.register(OrganizationMembership)
+class OrganizationMembershipAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "organization",
+        "role",
+        "is_active",
+        "joined_at",
+    )
+    list_filter = (
+        "organization",
+        "role",
+        "is_active",
+    )
+    search_fields = (
+        "user__username",
+        "user__email",
+        "organization__name",
+        "role__name",
+    )
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):

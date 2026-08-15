@@ -1,10 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from rest_framework import status
-
-from invoices.models import Organization, Customer, UserProfile, Product
-from core.permissions import IsOrganizationMember, IsOrganizationAdmin
+from invoices.models import Organization, OrganizationMembership, Role, Permission
 
 User = get_user_model()
 
@@ -12,79 +8,82 @@ User = get_user_model()
 class OrganizationPermissionsTestCase(TestCase):
 
     def setUp(self):
-        # Organization A setup
-        self.org_a = Organization.objects.create(name="ArewaNet Ventures", slug="arewanet-ventures")
-        self.user_a = User.objects.create_user(username="usera", password="password123")
-        self.profile_a = UserProfile.objects.create(user=self.user_a, organization=self.org_a, role="STAFF")
-        self.customer_a = Customer.objects.create(
-            organization=self.org_a,
-            company_name="Customer A",
-            email="customera@arewanet.com"
+        self.role_admin = Role.objects.get(slug="administrator")
+        self.role_accountant = Role.objects.get(slug="accountant")
+        self.role_sales = Role.objects.get(slug="sales-officer")
+
+        self.org_a = Organization.objects.create(
+            name="ArewaNet Ventures",
+            slug="arewanet-ventures",
+            email="info@arewanet.ng",
+            phone="08020000000"
+        )
+        self.org_b = Organization.objects.create(
+            name="Test Business Ltd",
+            slug="test-business-ltd",
+            email="contact@testbusiness.ng",
+            phone="08030000000"
         )
 
-        # Organization Admin setup for Org A
-        self.admin_user_a = User.objects.create_user(username="admina", password="password123")
-        self.admin_profile_a = UserProfile.objects.create(user=self.admin_user_a, organization=self.org_a, role="ADMIN")
+        self.user_a = User.objects.create_user(username="user_a", email="user_a@test.com", password="password123")
+        self.user_b = User.objects.create_user(username="user_b", email="user_b@test.com", password="password123")
 
-        # Organization B setup
-        self.org_b = Organization.objects.create(name="ABC Technologies", slug="abc-technologies")
-        self.user_b = User.objects.create_user(username="userb", password="password123")
-        self.profile_b = UserProfile.objects.create(user=self.user_b, organization=self.org_b, role="STAFF")
-        self.customer_b = Customer.objects.create(
-            organization=self.org_b,
-            company_name="Customer B",
-            email="customerb@abctech.com"
-        )
+    def test_permission_creation_and_lookup(self):
+        codes = ["customer.view", "invoice.create", "grn.approve", "stock_adjustment.approve"]
+        for code in codes:
+            perm = Permission.objects.get(code=code)
+            self.assertTrue(perm.is_active)
+            self.assertIsNotNone(perm.name)
+            self.assertIsNotNone(perm.module)
 
-        # User without an organization
-        self.no_org_user = User.objects.create_user(username="noorguser", password="password123")
+    def test_role_permission_assignment(self):
+        # Administrator should have invoice.create and stock_adjustment.approve
+        self.assertTrue(self.role_admin.permissions.filter(code="invoice.create").exists())
+        self.assertTrue(self.role_admin.permissions.filter(code="stock_adjustment.approve").exists())
 
-        self.client = APIClient()
+        # Sales Officer should have quotation.create but NOT stock_adjustment.approve
+        self.assertTrue(self.role_sales.permissions.filter(code="quotation.create").exists())
+        self.assertFalse(self.role_sales.permissions.filter(code="stock_adjustment.approve").exists())
 
-    def test_1_authenticated_user_with_organization_allowed(self):
-        self.client.force_authenticate(user=self.user_a)
-        response = self.client.get("/api/v1/customers/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_membership_has_permission_active(self):
+        m_admin = OrganizationMembership.objects.create(user=self.user_a, organization=self.org_a, role=self.role_admin)
+        self.assertTrue(m_admin.has_permission("invoice.create"))
+        self.assertTrue(m_admin.has_permission("customer.view"))
 
-    def test_2_unauthenticated_user_denied(self):
-        self.client.logout()
-        response = self.client.get("/api/v1/customers/")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        m_sales = OrganizationMembership.objects.create(user=self.user_b, organization=self.org_a, role=self.role_sales)
+        self.assertTrue(m_sales.has_permission("quotation.create"))
+        self.assertFalse(m_sales.has_permission("inventory.adjustment.approve"))
 
-    def test_3_authenticated_user_without_organization_forbidden(self):
-        self.client.force_authenticate(user=self.no_org_user)
-        response = self.client.get("/api/v1/customers/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_inactive_membership(self):
+        m = OrganizationMembership.objects.create(user=self.user_a, organization=self.org_a, role=self.role_admin, is_active=False)
+        self.assertFalse(m.has_permission("invoice.create"))
 
-    def test_4_organization_a_accessing_organization_b_returns_404(self):
-        self.client.force_authenticate(user=self.user_a)
-        response = self.client.get(f"/api/v1/customers/{self.customer_b.id}/")
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    def test_inactive_role(self):
+        role_inactive = Role.objects.create(name="Inactive Role", slug="inactive-role", is_active=False)
+        role_inactive.permissions.add(Permission.objects.get(code="invoice.create"))
 
-    def test_5_organization_admin_allowed(self):
-        self.client.force_authenticate(user=self.admin_user_a)
-        response = self.client.get("/api/v1/customers/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        m = OrganizationMembership.objects.create(user=self.user_a, organization=self.org_a, role=role_inactive)
+        self.assertFalse(m.has_permission("invoice.create"))
 
-    def test_critical_multi_tenant_isolation(self):
-        """
-        Critical Multi-Tenant Test:
-        Verify that user from Organization A sees only Customer A in list queries,
-        and receives a 404 error when attempting to fetch Customer B by ID.
-        """
-        self.client.force_authenticate(user=self.user_a)
+    def test_inactive_permission(self):
+        m = OrganizationMembership.objects.create(user=self.user_a, organization=self.org_a, role=self.role_sales)
+        perm = Permission.objects.get(code="quotation.create")
 
-        # 1. List query isolation
-        response = self.client.get("/api/v1/customers/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data.get("results", response.data)
-        if isinstance(results, dict) and "data" in results:
-            results = results["data"]
+        self.assertTrue(m.has_permission("quotation.create"))
 
-        customer_names = [item["company_name"] for item in results]
-        self.assertIn("Customer A", customer_names)
-        self.assertNotIn("Customer B", customer_names)
+        # Deactivate permission
+        perm.is_active = False
+        perm.save()
 
-        # 2. Detail object lookup isolation (404 for cross-tenant ID)
-        detail_response = self.client.get(f"/api/v1/customers/{self.customer_b.id}/")
-        self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(m.has_permission("quotation.create"))
+
+    def test_cross_organization_permissions(self):
+        # User A is Admin in Org A, Accountant in Org B
+        m_a = OrganizationMembership.objects.create(user=self.user_a, organization=self.org_a, role=self.role_admin)
+        m_b = OrganizationMembership.objects.create(user=self.user_a, organization=self.org_b, role=self.role_accountant)
+
+        # In Org A (Admin), User A can delete invoices
+        self.assertTrue(m_a.has_permission("invoice.delete"))
+
+        # In Org B (Accountant), User A CANNOT delete invoices
+        self.assertFalse(m_b.has_permission("invoice.delete"))

@@ -34,3 +34,8 @@ htmlcov/
 
 # Node
 node_modules/
+
+# Scratch & Temporary Output Files
+scratch/
+scratch_*.txt
+*.scratch

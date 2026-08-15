@@ -1,22 +1,62 @@
 import io
 from decimal import Decimal
 from datetime import date, datetime
+from django.contrib.auth import logout as auth_logout
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.db.models import Sum, Q
 from django.core.mail import EmailMessage
 from django.contrib import messages
 
-from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product
+from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product, OrganizationMembership
 from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm, QuotationForm, QuotationItemFormSet
 from .utils.pdf_generator import generate_invoice_pdf
 
 
+def user_logout(request):
+    auth_logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect('login')
+
+
+@login_required
+def switch_organization(request):
+    if request.method == "POST":
+        org_id = request.POST.get("organization_id")
+        if org_id:
+            membership = OrganizationMembership.objects.filter(
+                user=request.user,
+                organization_id=org_id,
+                is_active=True,
+            ).first()
+            if membership:
+                request.session['active_organization_id'] = membership.organization.id
+                messages.success(request, f"Switched active organization to {membership.organization.name}.")
+            else:
+                messages.error(request, "You do not have active access to that organization.")
+                raise PermissionDenied("Unauthorized organization access attempt.")
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard"
+    return redirect(next_url)
+
+
 def _get_user_organization(user):
+    if not user or not user.is_authenticated:
+        org = Organization.objects.first()
+        if not org:
+            org = Organization.objects.create(name='ArewaNet Ventures', slug='arewanet-ventures')
+        return org
+
+    if hasattr(user, 'organization_memberships'):
+        active_m = user.organization_memberships.filter(is_active=True).first()
+        if active_m and active_m.organization:
+            return active_m.organization
+
     if hasattr(user, 'userprofile') and user.userprofile.organization:
         return user.userprofile.organization
+
     org = Organization.objects.first()
     if not org:
         org = Organization.objects.create(name='ArewaNet Ventures', slug='arewanet-ventures')
@@ -470,19 +510,37 @@ def _build_receipt_context(receipt_obj):
     )
 
 
-@login_required
-def receipt_detail(request, pk):
-    org = _get_user_organization(request.user)
-    receipt = get_object_or_404(
-        Receipt.objects.select_related(
+def _fetch_receipt(pk, org):
+    try:
+        return Receipt.objects.select_related(
             "payment",
             "payment__invoice",
             "payment__invoice__customer",
             "organization",
-        ),
-        pk=pk,
-        organization=org
-    )
+        ).get(
+            Q(pk=pk) | Q(receipt_no=pk),
+            Q(organization=org) | Q(payment__organization=org) | Q(payment__invoice__organization=org) | Q(organization__isnull=True)
+        )
+    except (Receipt.DoesNotExist, ValueError):
+        try:
+            from sales.payments.models import Receipt as SalesReceipt
+            return SalesReceipt.objects.select_related(
+                "payment",
+                "payment__invoice",
+                "payment__invoice__customer",
+                "organization",
+            ).get(
+                Q(pk=pk) | Q(receipt_number=pk),
+                Q(organization=org) | Q(payment__organization=org) | Q(payment__invoice__organization=org) | Q(organization__isnull=True)
+            )
+        except Exception:
+            raise Http404("Receipt not found")
+
+
+@login_required
+def receipt_detail(request, pk):
+    org = _get_user_organization(request.user)
+    receipt = _fetch_receipt(pk, org)
     context = _build_receipt_context(receipt)
     return render(request, "documents/receipt/detail.html", context)
 
@@ -490,16 +548,7 @@ def receipt_detail(request, pk):
 @login_required
 def receipt_print(request, pk):
     org = _get_user_organization(request.user)
-    receipt = get_object_or_404(
-        Receipt.objects.select_related(
-            "payment",
-            "payment__invoice",
-            "payment__invoice__customer",
-            "organization",
-        ),
-        pk=pk,
-        organization=org
-    )
+    receipt = _fetch_receipt(pk, org)
     context = _build_receipt_context(receipt)
     return render(request, "documents/receipt/detail.html", context)
 
@@ -507,16 +556,7 @@ def receipt_print(request, pk):
 @login_required
 def receipt_pdf(request, pk):
     org = _get_user_organization(request.user)
-    receipt = get_object_or_404(
-        Receipt.objects.select_related(
-            "payment",
-            "payment__invoice",
-            "payment__invoice__customer",
-            "organization",
-        ),
-        pk=pk,
-        organization=org
-    )
+    receipt = _fetch_receipt(pk, org)
     from django.template.loader import render_to_string
     context = _build_receipt_context(receipt)
     html_content = render_to_string("documents/receipt/detail.html", context, request=request)
@@ -692,31 +732,6 @@ def invoice_send(request, pk):
     return redirect('invoice_detail', pk=invoice.id)
 
 
-@login_required
-def quotation_convert(request, pk):
-    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
-    org = _get_user_organization(request.user)
-    quotation = get_object_or_404(Quotation, id=pk)
-
-    invoice = Invoice.objects.create(
-        organization=org,
-        customer=quotation.customer,
-        total_due=quotation.total,
-        invoice_date=datetime.now().date(),
-        due_date=datetime.now().date(),
-        project_name="Converted from Quotation",
-        deployment_phase="Phase 1"
-    )
-
-    quotation.status = 'INVOICED'
-    quotation.save()
-
-    ActivityLog.objects.create(
-        user=request.user,
-        action=f"Quotation {quotation.quote_no} Converted to Invoice {invoice.invoice_no}"
-    )
-
-    return redirect('invoice_detail', pk=invoice.id)
 
 
 @login_required
@@ -1175,6 +1190,7 @@ def quotation_convert(request, pk):
 
     from sales.services.quotation_service import QuotationService
     invoice = QuotationService.convert_to_invoice(quotation, user=request.user)
+    return redirect('invoice_detail', pk=invoice.id)
 
 @login_required
 def quotation_pdf(request, pk):

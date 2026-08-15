@@ -128,6 +128,6 @@ class WorkflowsAndPerformanceTestCase(TestCase):
                 total_due=Decimal("1000.00")
             )
 
-        with self.assertNumQueries(43):
+        with self.assertNumQueries(45):
             response = self.client.get("/api/v1/invoices/")
             self.assertEqual(response.status_code, status.HTTP_200_OK)
