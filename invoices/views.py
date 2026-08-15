@@ -77,24 +77,39 @@ def _check_permission(user, allowed_roles):
 
 @login_required
 def dashboard(request):
-    org = _get_user_organization(request.user)
-    from sales.services.dashboard_service import DashboardService
-    context = DashboardService.statistics(organization=org)
+    org = getattr(request, 'organization', None) or _get_user_organization(request.user)
+    membership = getattr(request, 'membership', None)
+    from invoices.services.dashboard_service import DashboardService
+    service = DashboardService(organization=org)
+    dashboard_data = service.get_dashboard_data(membership=membership)
 
-    # Context keys for template compatibility
-    context['total_revenue'] = context.get('total_revenue', Decimal('0.00'))
-    context['revenue'] = context.get('revenue_month', Decimal('0.00'))
-    context['payments_today'] = context.get('payments_today', Decimal('0.00'))
-    context['outstanding'] = context.get('outstanding_balance', Decimal('0.00'))
-    context['customer_count'] = context.get('total_customers', 0)
-    context['paid_count'] = context.get('paid_invoices_count', 0)
-    context['paid'] = context.get('paid_invoices_count', 0)
-    context['unpaid_count'] = context.get('unpaid_invoices_count', 0)
-    context['unpaid'] = context.get('unpaid_invoices_count', 0)
+    context = {
+        'kpis': dashboard_data['kpis'],
+        'recent_activity': dashboard_data['recent_activity'],
+        'customer_count': dashboard_data['kpis'].get('customers', {}).get('count', 0),
+        'supplier_count': dashboard_data['kpis'].get('suppliers', {}).get('count', 0),
+        'product_count': dashboard_data['kpis'].get('products', {}).get('total_count', 0),
+        'invoice_summary': dashboard_data['kpis'].get('invoices', {}),
+        'payment_summary': dashboard_data['kpis'].get('payments', {}),
+        'quotation_summary': dashboard_data['kpis'].get('quotations', {}),
+        'recent_invoices': dashboard_data['recent_activity'].get('invoices', []),
+        'recent_quotations': dashboard_data['recent_activity'].get('quotations', []),
+        'recent_payments': dashboard_data['recent_activity'].get('payments', []),
+    }
+
+    if 'payments' in dashboard_data['kpis']:
+        context['total_revenue'] = dashboard_data['kpis']['payments']['total_received']
+        context['revenue'] = dashboard_data['kpis']['payments']['total_received']
+    if 'invoices' in dashboard_data['kpis']:
+        context['outstanding'] = dashboard_data['kpis']['invoices']['outstanding']
+        context['paid_count'] = dashboard_data['kpis']['invoices']['paid_count']
+        context['paid'] = dashboard_data['kpis']['invoices']['paid_count']
+        context['unpaid_count'] = dashboard_data['kpis']['invoices']['unpaid_count']
+        context['unpaid'] = dashboard_data['kpis']['invoices']['unpaid_count']
 
     return render(
         request,
-        'invoices/dashboard.html',
+        'dashboard/dashboard.html',
         context
     )
 

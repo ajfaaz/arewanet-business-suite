@@ -1,0 +1,76 @@
+<div class="row">
+    {% if recent_invoices %}
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-dark"><i class="bi bi-file-earmark-text text-primary me-2"></i>Recent Invoices</h6>
+                <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in recent_invoices %}
+                        <tr>
+                            <td><a href="{% url 'invoice_detail' inv.id %}" class="fw-bold text-decoration-none">{{ inv.invoice_no }}</a></td>
+                            <td>{{ inv.customer.company_name|truncatechars:20 }}</td>
+                            <td class="fw-semibold">{{ organization.currency|default:'NGN' }} {{ inv.total_due }}</td>
+                            <td>
+                                {% if inv.status == 'PAID' %}<span class="badge bg-success">Paid</span>
+                                {% elif inv.status == 'PARTIAL' %}<span class="badge bg-warning text-dark">Partial</span>
+                                {% elif inv.status == 'OVERDUE' %}<span class="badge bg-danger">Overdue</span>
+                                {% else %}<span class="badge bg-secondary">Draft</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recent_quotations %}
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-dark"><i class="bi bi-file-earmark-code text-info me-2"></i>Recent Quotations</h6>
+                <a href="{% url 'quotation_list' %}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Quotation #</th>
+                            <th>Customer</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for q in recent_quotations %}
+                        <tr>
+                            <td><a href="{% url 'quotation_detail' q.id %}" class="fw-bold text-decoration-none">{{ q.quotation_no }}</a></td>
+                            <td>{{ q.customer.company_name|truncatechars:20 }}</td>
+                            <td class="fw-semibold">{{ organization.currency|default:'NGN' }} {{ q.total }}</td>
+                            <td>
+                                {% if q.status == 'CONVERTED' %}<span class="badge bg-success">Converted</span>
+                                {% elif q.status == 'SENT' %}<span class="badge bg-info">Sent</span>
+                                {% else %}<span class="badge bg-secondary">Draft</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

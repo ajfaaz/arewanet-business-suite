@@ -31,6 +31,12 @@ urlpatterns = [
     ),
 
     path(
+        'dashboard/',
+        views.dashboard,
+        name='dashboard_explicit'
+    ),
+
+    path(
         'search/',
         views.global_search,
         name='global_search'

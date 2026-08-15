@@ -1,0 +1,30 @@
+{% if user_memberships and user_memberships.count > 1 %}
+<div class="dropdown me-3">
+    <button class="btn btn-outline-light dropdown-toggle btn-sm d-flex align-items-center gap-2 px-3 py-1 border-secondary" type="button" id="orgSwitcherDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-building text-info"></i>
+        <span class="fw-semibold text-white">{{ organization.name }}</span>
+        <span class="badge bg-info text-dark text-xs ms-1">{{ role.name|default:"Member" }}</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="orgSwitcherDropdown">
+        <li class="dropdown-header text-uppercase text-xs text-muted">Switch Organization</li>
+        {% for m in user_memberships %}
+        <li>
+            <form action="{% url 'switch_organization' %}" method="post" class="d-inline w-100">
+                {% csrf_token %}
+                <input type="hidden" name="organization_id" value="{{ m.organization.id }}">
+                <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {% if m.organization.id == organization.id %}active fw-bold{% endif %}">
+                    <span><i class="bi bi-building me-2"></i>{{ m.organization.name }}</span>
+                    <span class="badge bg-secondary text-xs">{{ m.role.name }}</span>
+                </button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% else %}
+<div class="d-flex align-items-center gap-2 me-3 text-white-50">
+    <i class="bi bi-building text-info"></i>
+    <span class="fw-semibold text-white me-1">{{ organization.name }}</span>
+    {% if role %}<span class="badge bg-secondary text-xs">{{ role.name }}</span>{% endif %}
+</div>
+{% endif %}

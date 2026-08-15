@@ -1,0 +1,65 @@
+{% extends 'invoices/base.html' %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Welcome Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">
+                Welcome back, {{ request.user.first_name|default:request.user.username }}!
+            </h3>
+            <p class="text-muted mb-0 small">
+                Operating under <strong class="text-primary">{{ organization.name }}</strong>
+                {% if role %}<span class="badge bg-secondary ms-2">{{ role.name }}</span>{% endif %}
+            </p>
+        </div>
+        <div>
+            {% if kpis.show_invoices %}
+            <a href="{% url 'invoice_create' %}" class="btn btn-primary btn-sm shadow-sm me-2">
+                <i class="bi bi-plus-lg me-1"></i> New Invoice
+            </a>
+            {% endif %}
+            {% if kpis.show_customers %}
+            <a href="{% url 'customer_create' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-person-plus me-1"></i> New Customer
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Permission-Aware Primary KPI Stat Cards Row -->
+    <div class="row mb-4">
+        {% if kpis.show_customers %}
+        {% include 'dashboard/components/stat_card.html' with title="Total Customers" value=kpis.customers.formatted_count subtitle="Active Client Directory" icon="people" color="primary" %}
+        {% endif %}
+
+        {% if kpis.show_invoices %}
+        {% include 'dashboard/components/stat_card.html' with title="Total Invoiced" value=kpis.invoices.total_invoiced subtitle=kpis.invoices.total_count|add:" Total Invoices" icon="file-earmark-text" color="info" %}
+        {% include 'dashboard/components/stat_card.html' with title="Outstanding Balance" value=kpis.invoices.outstanding subtitle=kpis.invoices.unpaid_count|add:" Pending Payment" icon="exclamation-circle" color="warning" %}
+        {% endif %}
+
+        {% if kpis.show_payments %}
+        {% include 'dashboard/components/stat_card.html' with title="Total Payments Received" value=kpis.payments.total_received subtitle=kpis.payments.total_count|add:" Transactions" icon="cash-stack" color="success" %}
+        {% endif %}
+    </div>
+
+    <!-- Permission-Aware Secondary Metrics Row -->
+    <div class="row mb-4">
+        {% if kpis.show_products %}
+        {% include 'dashboard/components/stat_card.html' with title="Products & Services" value=kpis.products.total_count subtitle=kpis.products.low_stock_count|add:" Low Stock Items" icon="box-seam" color="secondary" %}
+        {% include 'dashboard/components/stat_card.html' with title="Stock Value" value=kpis.products.stock_value subtitle="Total Catalog Inventory Value" icon="tags" color="success" %}
+        {% endif %}
+
+        {% if kpis.show_suppliers %}
+        {% include 'dashboard/components/stat_card.html' with title="Active Suppliers" value=kpis.suppliers.formatted_count subtitle="Procurement Network" icon="truck" color="dark" %}
+        {% endif %}
+
+        {% if kpis.show_quotations %}
+        {% include 'dashboard/components/stat_card.html' with title="Sales Quotations" value=kpis.quotations.total_count subtitle=kpis.quotations.pending_count|add:" Pending Conversion" icon="file-earmark-code" color="info" %}
+        {% endif %}
+    </div>
+
+    <!-- Recent Activity Tables Component -->
+    {% include 'dashboard/components/recent_activity.html' %}
+</div>
+{% endblock %}

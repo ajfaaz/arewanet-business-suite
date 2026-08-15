@@ -1,0 +1,18 @@
+<div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-0 shadow-sm rounded-3 h-100 border-start border-4 border-{{ color|default:'info' }}">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col me-2">
+                    <div class="text-xs fw-bold text-uppercase mb-1 text-{{ color|default:'info' }}">{{ title }}</div>
+                    <div class="h4 mb-0 fw-bold text-dark">{{ value }}</div>
+                    {% if subtitle %}
+                    <div class="text-xs text-muted mt-1">{{ subtitle }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-auto">
+                    <i class="bi bi-{{ icon|default:'bar-chart' }} fs-2 text-muted opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

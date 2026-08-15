@@ -1,0 +1,126 @@
+<aside class="sidebar d-flex flex-column">
+    <div class="sidebar-brand">
+        <i class="bi bi-wallet2 text-info me-2"></i>{{ organization.name|default:"ArewaNet ABS" }}
+    </div>
+
+    <ul class="nav flex-column mt-3 flex-grow-1">
+        <li class="nav-item">
+            <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </li>
+
+        {% if not membership or membership.has_permission.customer_view or membership.has_permission.quotation_view or membership.has_permission.invoice_view or membership.has_permission.payment_view or user.is_superuser %}
+        <li class="nav-item mt-2">
+            <small class="sidebar-heading">Sales & Revenue</small>
+        </li>
+        {% if not membership or membership.has_permission.customer_view or user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'customer_list' %}" class="nav-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-people"></i> Customers
+            </a>
+        </li>
+        {% endif %}
+        {% if not membership or membership.has_permission.quotation_view or user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'quotation_list' %}" class="nav-link {% if 'quotation' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-file-earmark-code"></i> Quotations
+            </a>
+        </li>
+        {% endif %}
+        {% if not membership or membership.has_permission.invoice_view or user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'invoice_list' %}" class="nav-link {% if 'invoice' in request.resolver_match.url_name and 'payment' not in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-file-earmark-text"></i> Invoices
+            </a>
+        </li>
+        {% endif %}
+        {% if not membership or membership.has_permission.payment_view or user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'payment_dashboard' %}" class="nav-link {% if 'payment' in request.resolver_match.url_name or 'receipt' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-cash-stack"></i> Payment Center
+            </a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+            <a href="{% url 'credit_note_list' %}" class="nav-link {% if 'credit_note' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-file-invoice-dollar text-danger"></i> Credit Notes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'debit_note_list' %}" class="nav-link {% if 'debit_note' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-file-invoice-dollar text-info"></i> Debit Notes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'aging_report' %}" class="nav-link {% if 'aging' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-clock text-warning"></i> Aging Report
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'subscription_list' %}" class="nav-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-sync text-primary"></i> Subscriptions
+            </a>
+        </li>
+        {% endif %}
+
+        {% if not membership or membership.has_permission.supplier_view or membership.has_permission.purchase_order_view or user.is_superuser %}
+        <li class="nav-item mt-2">
+            <small class="sidebar-heading">Purchasing</small>
+        </li>
+        <li class="nav-item">
+            <a href="#" class="nav-link disabled opacity-50">
+                <i class="fas fa-truck"></i> Suppliers <small class="text-xs ms-1">(Soon)</small>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="#" class="nav-link disabled opacity-50">
+                <i class="fas fa-shopping-cart"></i> Purchase Orders <small class="text-xs ms-1">(Soon)</small>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if not membership or membership.has_permission.product_view or membership.has_permission.grn_view or membership.has_permission.gin_view or user.is_superuser %}
+        <li class="nav-item mt-2">
+            <small class="sidebar-heading">Inventory & Operations</small>
+        </li>
+        {% if not membership or membership.has_permission.product_view or user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'product_list' %}" class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-box"></i> Products & Services
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'category_list' %}" class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-tags"></i> Categories
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
+
+        <li class="nav-item mt-2">
+            <small class="sidebar-heading">System</small>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/" class="nav-link" target="_blank">
+                <i class="bi bi-gear"></i> Administration
+            </a>
+        </li>
+        <li class="nav-item mt-2">
+            <a href="{% url 'logout' %}" class="nav-link text-danger fw-semibold">
+                <i class="bi bi-box-arrow-right text-danger"></i> Logout
+            </a>
+        </li>
+    </ul>
+
+    <!-- Sidebar User Profile Panel -->
+    <div class="p-3 border-top border-secondary small text-white-50 d-flex justify-content-between align-items-center">
+        <div>
+            <span class="d-block text-white fw-bold">{{ request.user.username|default:"User" }}</span>
+            <span class="text-xs text-info fw-semibold">{{ organization.name|default:"Organization" }}</span>
+        </div>
+        <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger text-white border-0 py-1 px-2" title="Logout">
+            <i class="bi bi-box-arrow-right fs-6"></i>
+        </a>
+    </div>
+</aside>
