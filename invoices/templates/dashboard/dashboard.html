@@ -6,7 +6,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
         <div>
             <h3 class="fw-bold text-dark mb-1">
-                Welcome back, {{ request.user.first_name|default:request.user.username }}!
+                Good afternoon, {{ request.user.first_name|default:request.user.username }}
             </h3>
             <p class="text-muted mb-0 small">
                 Operating under <strong class="text-primary">{{ organization.name }}</strong>
@@ -26,6 +26,43 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Quick Actions Component -->
+    {% include 'dashboard/components/quick_actions.html' %}
+
+    <!-- Developer Permission Debug Summary Panel (Dev / Superuser Only) -->
+    {% if user.is_superuser or debug %}
+    <div class="accordion mb-4" id="devPermissionAccordion">
+        <div class="accordion-item border-secondary">
+            <h2 class="accordion-header" id="headingDevPerm">
+                <button class="accordion-button collapsed py-2 bg-light text-secondary text-xs fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDevPerm" aria-expanded="false" aria-controls="collapseDevPerm">
+                    <i class="bi bi-bug me-2"></i> Developer Permission Summary (Debug Mode)
+                </button>
+            </h2>
+            <div id="collapseDevPerm" class="accordion-collapse collapse" aria-labelledby="headingDevPerm" data-bs-parent="#devPermissionAccordion">
+                <div class="accordion-body bg-dark text-light text-xs font-monospace">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Active Organization:</strong> {{ organization.name }} (ID: {{ organization.id }})<br>
+                            <strong>Active Role:</strong> {{ role.name|default:"Superuser / No Role" }}
+                        </div>
+                        <div class="col-md-8">
+                            <strong>Evaluated Permissions:</strong>
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                <span class="badge {% if kpis.show_customers %}bg-success{% else %}bg-danger{% endif %}">customer.view</span>
+                                <span class="badge {% if kpis.show_quotations %}bg-success{% else %}bg-danger{% endif %}">quotation.view</span>
+                                <span class="badge {% if kpis.show_invoices %}bg-success{% else %}bg-danger{% endif %}">invoice.view</span>
+                                <span class="badge {% if kpis.show_payments %}bg-success{% else %}bg-danger{% endif %}">payment.view</span>
+                                <span class="badge {% if kpis.show_products %}bg-success{% else %}bg-danger{% endif %}">product.view</span>
+                                <span class="badge {% if kpis.show_suppliers %}bg-success{% else %}bg-danger{% endif %}">supplier.view</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Permission-Aware Primary KPI Stat Cards Row -->
     <div class="row mb-4">

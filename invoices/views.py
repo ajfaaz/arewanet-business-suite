@@ -85,6 +85,7 @@ def dashboard(request):
 
     context = {
         'kpis': dashboard_data['kpis'],
+        'actions': dashboard_data.get('actions', {}),
         'recent_activity': dashboard_data['recent_activity'],
         'customer_count': dashboard_data['kpis'].get('customers', {}).get('count', 0),
         'supplier_count': dashboard_data['kpis'].get('suppliers', {}).get('count', 0),

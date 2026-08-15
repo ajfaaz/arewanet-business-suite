@@ -1,0 +1,46 @@
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 fw-bold text-dark d-flex align-items-center">
+            <i class="bi bi-lightning-charge text-warning me-2 fs-5"></i>Quick Actions
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            {% if actions.can_create_customer %}
+            <a href="{% url 'customer_create' %}" class="btn btn-outline-primary btn-sm shadow-sm">
+                <i class="bi bi-person-plus me-1"></i> + New Customer
+            </a>
+            {% endif %}
+
+            {% if actions.can_create_quotation %}
+            <a href="{% url 'quotation_create' %}" class="btn btn-outline-info btn-sm shadow-sm">
+                <i class="bi bi-file-earmark-plus me-1"></i> + New Quotation
+            </a>
+            {% endif %}
+
+            {% if actions.can_create_invoice %}
+            <a href="{% url 'invoice_create' %}" class="btn btn-primary btn-sm shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> + New Invoice
+            </a>
+            {% endif %}
+
+            {% if actions.can_create_grn %}
+            <a href="#" class="btn btn-outline-success btn-sm shadow-sm disabled opacity-50">
+                <i class="fas fa-truck-loading me-1"></i> + Receive Goods (GRN)
+            </a>
+            {% endif %}
+
+            {% if actions.can_create_gin %}
+            <a href="#" class="btn btn-outline-warning btn-sm shadow-sm disabled opacity-50">
+                <i class="fas fa-dolly me-1"></i> + Issue Goods (GIN)
+            </a>
+            {% endif %}
+
+            {% if actions.can_create_product %}
+            <a href="{% url 'product_create' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="fas fa-box me-1"></i> + New Product
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -173,7 +173,18 @@ class DashboardService:
         if show_quotations:
             kpis['quotations'] = self.get_quotation_kpi()
 
+        actions = {
+            'can_create_customer': self.has_permission(membership, 'customer.create'),
+            'can_create_quotation': self.has_permission(membership, 'quotation.create'),
+            'can_create_invoice': self.has_permission(membership, 'invoice.create'),
+            'can_create_grn': self.has_permission(membership, 'grn.create'),
+            'can_create_gin': self.has_permission(membership, 'gin.create'),
+            'can_create_product': self.has_permission(membership, 'product.create'),
+            'can_create_supplier': self.has_permission(membership, 'supplier.create'),
+        }
+
         return {
             'kpis': kpis,
+            'actions': actions,
             'recent_activity': self.get_recent_activity(),
         }

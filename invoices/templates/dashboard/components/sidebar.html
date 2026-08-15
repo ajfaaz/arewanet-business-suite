@@ -10,103 +10,32 @@
             </a>
         </li>
 
-        {% if not membership or membership.has_permission.customer_view or membership.has_permission.quotation_view or membership.has_permission.invoice_view or membership.has_permission.payment_view or user.is_superuser %}
-        <li class="nav-item mt-2">
-            <small class="sidebar-heading">Sales & Revenue</small>
-        </li>
-        {% if not membership or membership.has_permission.customer_view or user.is_superuser %}
-        <li class="nav-item">
-            <a href="{% url 'customer_list' %}" class="nav-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-people"></i> Customers
-            </a>
-        </li>
-        {% endif %}
-        {% if not membership or membership.has_permission.quotation_view or user.is_superuser %}
-        <li class="nav-item">
-            <a href="{% url 'quotation_list' %}" class="nav-link {% if 'quotation' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-file-earmark-code"></i> Quotations
-            </a>
-        </li>
-        {% endif %}
-        {% if not membership or membership.has_permission.invoice_view or user.is_superuser %}
-        <li class="nav-item">
-            <a href="{% url 'invoice_list' %}" class="nav-link {% if 'invoice' in request.resolver_match.url_name and 'payment' not in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-file-earmark-text"></i> Invoices
-            </a>
-        </li>
-        {% endif %}
-        {% if not membership or membership.has_permission.payment_view or user.is_superuser %}
-        <li class="nav-item">
-            <a href="{% url 'payment_dashboard' %}" class="nav-link {% if 'payment' in request.resolver_match.url_name or 'receipt' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-cash-stack"></i> Payment Center
-            </a>
-        </li>
-        {% endif %}
-        <li class="nav-item">
-            <a href="{% url 'credit_note_list' %}" class="nav-link {% if 'credit_note' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="fas fa-file-invoice-dollar text-danger"></i> Credit Notes
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="{% url 'debit_note_list' %}" class="nav-link {% if 'debit_note' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="fas fa-file-invoice-dollar text-info"></i> Debit Notes
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="{% url 'aging_report' %}" class="nav-link {% if 'aging' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="fas fa-clock text-warning"></i> Aging Report
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="{% url 'subscription_list' %}" class="nav-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="fas fa-sync text-primary"></i> Subscriptions
-            </a>
-        </li>
+        {% if user_menu_sections %}
+            {% for section in user_menu_sections %}
+            <li class="nav-item mt-2">
+                <small class="sidebar-heading">{{ section.title }}</small>
+            </li>
+            {% for item in section.items %}
+            <li class="nav-item">
+                {% if item.disabled %}
+                <a href="#" class="nav-link disabled opacity-50">
+                    <i class="{{ item.icon }}"></i> {{ item.label }} {% if item.soon %}<small class="text-xs ms-1">(Soon)</small>{% endif %}
+                </a>
+                {% else %}
+                <a href="{% if item.external %}{{ item.url_name }}{% else %}{% url item.url_name %}{% endif %}" class="nav-link {% if item.url_match and item.url_match in request.resolver_match.url_name %}active{% endif %}" {% if item.external %}target="_blank"{% endif %}>
+                    <i class="{{ item.icon }}"></i> {{ item.label }}
+                </a>
+                {% endif %}
+            </li>
+            {% endfor %}
+            {% endfor %}
+        {% else %}
+            <!-- Fallback for legacy layout -->
+            <li class="nav-item mt-2"><small class="sidebar-heading">System</small></li>
+            <li class="nav-item"><a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2"></i> Main</a></li>
         {% endif %}
 
-        {% if not membership or membership.has_permission.supplier_view or membership.has_permission.purchase_order_view or user.is_superuser %}
-        <li class="nav-item mt-2">
-            <small class="sidebar-heading">Purchasing</small>
-        </li>
-        <li class="nav-item">
-            <a href="#" class="nav-link disabled opacity-50">
-                <i class="fas fa-truck"></i> Suppliers <small class="text-xs ms-1">(Soon)</small>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="#" class="nav-link disabled opacity-50">
-                <i class="fas fa-shopping-cart"></i> Purchase Orders <small class="text-xs ms-1">(Soon)</small>
-            </a>
-        </li>
-        {% endif %}
-
-        {% if not membership or membership.has_permission.product_view or membership.has_permission.grn_view or membership.has_permission.gin_view or user.is_superuser %}
-        <li class="nav-item mt-2">
-            <small class="sidebar-heading">Inventory & Operations</small>
-        </li>
-        {% if not membership or membership.has_permission.product_view or user.is_superuser %}
-        <li class="nav-item">
-            <a href="{% url 'product_list' %}" class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="fas fa-box"></i> Products & Services
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="{% url 'category_list' %}" class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="fas fa-tags"></i> Categories
-            </a>
-        </li>
-        {% endif %}
-        {% endif %}
-
-        <li class="nav-item mt-2">
-            <small class="sidebar-heading">System</small>
-        </li>
-        <li class="nav-item">
-            <a href="/admin/" class="nav-link" target="_blank">
-                <i class="bi bi-gear"></i> Administration
-            </a>
-        </li>
-        <li class="nav-item mt-2">
+        <li class="nav-item mt-3">
             <a href="{% url 'logout' %}" class="nav-link text-danger fw-semibold">
                 <i class="bi bi-box-arrow-right text-danger"></i> Logout
             </a>

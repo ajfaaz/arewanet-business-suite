@@ -1,5 +1,6 @@
 from core.context import get_organization_context
 from invoices.models import OrganizationMembership
+from invoices.navigation import get_user_menu
 
 
 def active_organization_context(request):
@@ -15,6 +16,15 @@ def active_organization_context(request):
         is_active=True,
     ).select_related('organization', 'role')
 
+    resolver_match = getattr(request, 'resolver_match', None)
+    current_url_name = resolver_match.url_name if resolver_match else ''
+
+    user_menu_sections = get_user_menu(
+        membership=ctx.membership,
+        current_url_name=current_url_name,
+        is_superuser=request.user.is_superuser
+    )
+
     return {
         'organization': ctx.organization,
         'current_organization': ctx.organization,
@@ -25,4 +35,5 @@ def active_organization_context(request):
         'current_role': ctx.role,
         'org_context': ctx,
         'user_memberships': memberships,
+        'user_menu_sections': user_menu_sections,
     }
