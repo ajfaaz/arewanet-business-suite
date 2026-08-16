@@ -149,3 +149,63 @@ class QuotationTemplatePreviewTestCase(TestCase):
         self.client.login(username="prev_unauth", password="password123")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+    def test_modern_template_rendered_content(self):
+        self.client.login(username="prev_admin_a", password="password123")
+        url = f"{reverse('quotation_template_preview', kwargs={'pk': self.tpl_modern_a.pk})}?quotation={self.quote_a.pk}"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+
+        # Verify all required production modern fields are rendered
+        self.assertIn("Preview Org A", content)
+        self.assertIn("Org A Client Ltd", content)
+        self.assertIn(self.quote_a.quotation_no, content)
+        self.assertIn("Real Server Item", content)
+        self.assertIn("150000.00", content)
+        self.assertIn("161250.00", content)
+        self.assertIn("₦", content)
+        self.assertIn("Authorized Signature", content)
+        self.assertIn("Thank you for your business!", content)
+
+    def test_modern_template_renderer_direct(self):
+        from invoices.services.template_renderer import QuotationTemplateRenderer
+        renderer = QuotationTemplateRenderer(organization=self.org_a)
+        rendered_html = renderer.render(self.quote_a, template=self.tpl_modern_a)
+
+        self.assertIn("Preview Org A", rendered_html)
+        self.assertIn("Org A Client Ltd", rendered_html)
+        self.assertIn(self.quote_a.quotation_no, rendered_html)
+        self.assertIn("Real Server Item", rendered_html)
+        self.assertIn("150000.00", rendered_html)
+
+    def test_organization_isolation_matrix(self):
+        # Setup Org B User
+        user_admin_b = User.objects.create_user(username="prev_admin_b", password="password123")
+        OrganizationMembership.objects.create(user=user_admin_b, organization=self.org_b, role=self.role_admin)
+
+        # 1. Org A User + Org A Template + Org A Quote -> 200 OK
+        self.client.login(username="prev_admin_a", password="password123")
+        url_a_a = f"{reverse('quotation_template_preview', kwargs={'pk': self.tpl_modern_a.pk})}?quotation={self.quote_a.pk}"
+        res = self.client.get(url_a_a)
+        self.assertEqual(res.status_code, 200)
+
+        # 2. Org B User + Org B Template + Org B Quote -> 200 OK
+        self.client.login(username="prev_admin_b", password="password123")
+        url_b_b = f"{reverse('quotation_template_preview', kwargs={'pk': self.tpl_b.pk})}?quotation={self.quote_b.pk}"
+        res = self.client.get(url_b_b)
+        self.assertEqual(res.status_code, 200)
+
+        # 3. Org A User + Org A Template + Org B Quote -> 404 Denied
+        self.client.login(username="prev_admin_a", password="password123")
+        url_a_b = f"{reverse('quotation_template_preview', kwargs={'pk': self.tpl_modern_a.pk})}?quotation={self.quote_b.pk}"
+        res = self.client.get(url_a_b)
+        self.assertEqual(res.status_code, 404)
+
+        # 4. Org B User + Org A Template + Org B Quote -> 404 Denied
+        self.client.login(username="prev_admin_b", password="password123")
+        url_b_a = f"{reverse('quotation_template_preview', kwargs={'pk': self.tpl_modern_a.pk})}?quotation={self.quote_b.pk}"
+        res = self.client.get(url_b_a)
+        self.assertEqual(res.status_code, 404)
+

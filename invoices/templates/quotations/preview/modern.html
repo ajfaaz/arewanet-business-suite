@@ -2,196 +2,278 @@
 
 {% block quotation_content %}
 <style>
+    .modern-doc {
+        color: #1e293b;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.5;
+    }
     .modern-header {
         border-bottom: 3px solid #2563eb;
-        padding-bottom: 20px;
-        margin-bottom: 30px;
+        padding-bottom: 24px;
+        margin-bottom: 28px;
     }
-    .modern-title {
-        font-size: 28px;
+    .modern-brand-name {
+        font-size: 24px;
         font-weight: 800;
         color: #1e293b;
         letter-spacing: -0.5px;
     }
-    .modern-meta-box {
-        background: #f1f5f9;
+    .modern-doc-title {
+        font-size: 32px;
+        font-weight: 800;
+        color: #2563eb;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .modern-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 16px;
+        padding: 16px 20px;
     }
     .modern-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        margin-bottom: 30px;
+        margin-bottom: 28px;
+    }
+    .modern-table thead {
+        display: table-header-group;
     }
     .modern-table th {
-        background: #f8fafc;
-        color: #475569;
+        background: #1e293b;
+        color: #ffffff;
         font-weight: 600;
-        font-size: 13px;
+        font-size: 12px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.75px;
         padding: 12px 16px;
-        border-bottom: 2px solid #e2e8f0;
+        border: none;
+    }
+    .modern-table th:first-child {
+        border-top-left-radius: 6px;
+        border-bottom-left-radius: 6px;
+    }
+    .modern-table th:last-child {
+        border-top-right-radius: 6px;
+        border-bottom-right-radius: 6px;
+    }
+    .modern-table tr {
+        page-break-inside: avoid;
     }
     .modern-table td {
         padding: 14px 16px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
         font-size: 14px;
+        color: #334155;
     }
-    .modern-total-box {
+    .modern-summary-card {
         background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 20px;
-        border: 1px solid #e2e8f0;
+        page-break-inside: avoid;
     }
     .modern-grand-total {
-        font-size: 20px;
-        font-weight: 700;
+        font-size: 22px;
+        font-weight: 800;
         color: #2563eb;
     }
     .modern-card {
-        background: #f8fafc;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-left: 4px solid #2563eb;
-        padding: 14px 18px;
-        border-radius: 0 6px 6px 0;
+        padding: 16px 20px;
+        border-radius: 4px;
         margin-bottom: 20px;
+        page-break-inside: avoid;
+    }
+    .modern-signature-block {
+        page-break-inside: avoid;
+        margin-top: 40px;
+        padding-top: 20px;
+    }
+    .modern-footer {
+        border-top: 1px solid #e2e8f0;
+        padding-top: 20px;
+        margin-top: 40px;
+        page-break-inside: avoid;
     }
 </style>
 
-<div class="modern-header d-flex justify-content-between align-items-start">
-    <div>
-        {% if organization.logo %}
-        <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 50px; margin-bottom: 10px;">
-        {% else %}
-        <div class="fw-bold fs-4 text-primary mb-1">{{ organization.name }}</div>
-        {% endif %}
-        <div class="text-muted small">
-            {{ organization.address|default:'' }}<br>
-            {% if organization.phone %}Phone: {{ organization.phone }}{% endif %}
-            {% if organization.email %} | Email: {{ organization.email }}{% endif %}
-        </div>
-    </div>
-    <div class="text-end">
-        <div class="modern-title text-uppercase">Quotation</div>
-        <div class="fw-bold text-dark fs-5">#{{ quotation.quotation_no }}</div>
-        <div class="text-muted small mt-1">
-            <strong>Date:</strong> {{ quotation.quotation_date|date:"d M Y" }}<br>
-            {% if quotation.valid_until %}<strong>Valid Until:</strong> {{ quotation.valid_until|date:"d M Y" }}{% endif %}
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-6">
-        <div class="modern-meta-box">
-            <div class="text-uppercase text-muted fw-bold small mb-2" style="letter-spacing: 0.5px;">Quoted To</div>
-            <div class="fw-bold fs-6 text-dark">{{ customer_name }}</div>
-            {% if customer_address %}<div class="small text-muted mt-1">{{ customer_address }}</div>{% endif %}
-            <div class="small text-muted">
-                {% if customer_email %}{{ customer_email }}{% endif %}
-                {% if customer_phone %} | {{ customer_phone }}{% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-6">
-        <div class="modern-meta-box">
-            <div class="text-uppercase text-muted fw-bold small mb-2" style="letter-spacing: 0.5px;">Quotation Summary</div>
-            <div class="d-flex justify-content-between small mb-1">
-                <span class="text-muted">Status:</span>
-                <span class="badge bg-secondary">{{ quotation.status|default:'DRAFT' }}</span>
-            </div>
-            <div class="d-flex justify-content-between small mb-1">
-                <span class="text-muted">Currency:</span>
-                <span class="fw-semibold">NGN (₦)</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<table class="modern-table">
-    <thead>
-        <tr>
-            <th style="width: 8%;">#</th>
-            <th>Item & Description</th>
-            <th class="text-center" style="width: 12%;">Qty</th>
-            <th class="text-end" style="width: 20%;">Unit Price</th>
-            <th class="text-end" style="width: 22%;">Amount</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in items %}
-        <tr>
-            <td class="text-muted">{{ forloop.counter }}</td>
-            <td>
-                <div class="fw-semibold text-dark">{{ item.description }}</div>
-            </td>
-            <td class="text-center">{{ item.qty }}</td>
-            <td class="text-end">₦{{ item.unit_price|floatformat:2 }}</td>
-            <td class="text-end fw-semibold">₦{{ item.total|floatformat:2 }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5" class="text-center text-muted py-4">No line items included in this quotation.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<div class="row justify-content-end mb-4">
-    <div class="col-5">
-        <div class="modern-total-box">
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted small">Subtotal</span>
-                <span class="fw-semibold">₦{{ quotation.subtotal|floatformat:2 }}</span>
-            </div>
-            {% if quotation.vat or quotation.vat_amount %}
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted small">VAT ({{ quotation.vat|default:'7.5' }}%)</span>
-                <span>₦{{ quotation.vat_amount|default:'0.00'|floatformat:2 }}</span>
-            </div>
+<div class="modern-doc">
+    <!-- Header Section -->
+    <div class="modern-header d-flex justify-content-between align-items-start">
+        <div style="max-width: 60%;">
+            {% if organization.logo %}
+            <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 65px; max-width: 220px; margin-bottom: 12px; object-fit: contain;">
+            {% else %}
+            <div class="modern-brand-name mb-1">{{ organization.name }}</div>
             {% endif %}
-            {% if quotation.discount and quotation.discount > 0 %}
-            <div class="d-flex justify-content-between mb-2 text-danger">
-                <span class="small">Discount</span>
-                <span>-₦{{ quotation.discount|floatformat:2 }}</span>
+            <div class="text-muted small">
+                {% if organization.address %}{{ organization.address|linebreaksbr }}<br>{% endif %}
+                {% if organization.phone %}Phone: {{ organization.phone }}{% endif %}
+                {% if organization.email %} | Email: {{ organization.email }}{% endif %}
+                {% if organization.website %}<br>Website: {{ organization.website }}{% endif %}
             </div>
-            {% endif %}
-            <hr class="my-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold text-dark">Grand Total</span>
-                <span class="modern-grand-total">₦{{ quotation.total|floatformat:2 }}</span>
+        </div>
+        <div class="text-end">
+            <div class="modern-doc-title">QUOTATION</div>
+            <div class="fw-bold text-dark fs-5 mt-1">#{{ quotation.quotation_no }}</div>
+            <div class="text-muted small mt-2">
+                <strong>Date:</strong> {{ quotation.quotation_date|date:"d M Y" }}<br>
+                {% if quotation.valid_until %}
+                <strong>Valid Until:</strong> {{ quotation.valid_until|date:"d M Y" }}
+                {% endif %}
             </div>
         </div>
     </div>
-</div>
 
-{% if quotation.notes %}
-<div class="modern-card">
-    <div class="fw-bold small text-primary text-uppercase mb-1">Notes</div>
-    <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.notes }}</div>
-</div>
-{% endif %}
-
-{% if quotation.terms %}
-<div class="modern-card">
-    <div class="fw-bold small text-primary text-uppercase mb-1">Terms & Conditions</div>
-    <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.terms }}</div>
-</div>
-{% endif %}
-
-{% if organization.bank_name or organization.account_number %}
-<div class="modern-card">
-    <div class="fw-bold small text-primary text-uppercase mb-1">Banking Information</div>
-    <div class="small text-secondary">
-        <strong>Bank:</strong> {{ organization.bank_name|default:'N/A' }} |
-        <strong>Account Name:</strong> {{ organization.account_name|default:organization.name }} |
-        <strong>Account No:</strong> {{ organization.account_number|default:'N/A' }}
+    <!-- Customer & Meta Grid -->
+    <div class="row g-4 mb-4">
+        <div class="col-7">
+            <div class="modern-box h-100">
+                <div class="text-uppercase text-primary fw-bold small mb-2" style="letter-spacing: 0.5px;">Bill To</div>
+                <div class="fw-bold fs-6 text-dark">{{ customer_name }}</div>
+                {% if customer_contact_person %}
+                <div class="small text-secondary fw-semibold">Attn: {{ customer_contact_person }}</div>
+                {% endif %}
+                {% if customer_address %}
+                <div class="small text-muted mt-1" style="white-space: pre-line;">{{ customer_address }}</div>
+                {% endif %}
+                <div class="small text-muted mt-1">
+                    {% if customer_phone %}Phone: {{ customer_phone }}{% endif %}
+                    {% if customer_email %} | Email: {{ customer_email }}{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-5">
+            <div class="modern-box h-100">
+                <div class="text-uppercase text-primary fw-bold small mb-2" style="letter-spacing: 0.5px;">Quotation Meta</div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Status:</span>
+                    <span class="badge bg-secondary text-uppercase">{{ quotation.status|default:'DRAFT' }}</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Currency:</span>
+                    <span class="fw-bold text-dark">{{ currency_code }} ({{ currency_symbol }})</span>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">Issued By:</span>
+                    <span class="fw-semibold text-dark">{{ organization.name }}</span>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-{% endif %}
 
-<div class="text-center text-muted small mt-5 pt-4 border-top">
-    Thank you for your business! — <strong>{{ organization.name }}</strong>
+    <!-- Items Table -->
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 6%;">#</th>
+                <th>Item & Description</th>
+                <th class="text-center" style="width: 12%;">Qty</th>
+                <th class="text-end" style="width: 22%;">Unit Price</th>
+                <th class="text-end" style="width: 22%;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="text-muted fw-semibold">{{ forloop.counter }}</td>
+                <td>
+                    <div class="fw-semibold text-dark">{{ item.description }}</div>
+                </td>
+                <td class="text-center fw-semibold">{{ item.qty }}</td>
+                <td class="text-end">{{ currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-end fw-bold text-dark">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">No line items included in this quotation.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Financial Summary -->
+    <div class="row justify-content-end mb-4">
+        <div class="col-6 col-md-5">
+            <div class="modern-summary-card">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">Subtotal</span>
+                    <span class="fw-semibold text-dark">{{ currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span>
+                </div>
+                {% if quotation.discount and quotation.discount > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-danger">
+                    <span class="small">Discount</span>
+                    <span>-{{ currency_symbol }}{{ quotation.discount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if quotation.vat or quotation.vat_amount %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">VAT / Tax ({% if quotation.vat %}{{ quotation.vat }}{% else %}{{ organization.default_vat|default:'7.5' }}{% endif %}%)</span>
+                    <span class="text-dark">{{ currency_symbol }}{{ quotation.vat_amount|default:'0.00'|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                <hr class="my-2" style="border-color: #cbd5e1;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark fs-6">Grand Total</span>
+                    <span class="modern-grand-total">{{ currency_symbol }}{{ quotation.total|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes & Terms -->
+    {% if quotation.notes %}
+    <div class="modern-card">
+        <div class="fw-bold small text-primary text-uppercase mb-1" style="letter-spacing: 0.5px;">Notes</div>
+        <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.notes }}</div>
+    </div>
+    {% endif %}
+
+    {% if terms %}
+    <div class="modern-card">
+        <div class="fw-bold small text-primary text-uppercase mb-1" style="letter-spacing: 0.5px;">Terms & Conditions</div>
+        <div class="small text-secondary" style="white-space: pre-line;">{{ terms }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Bank Details -->
+    {% if organization.bank_name or organization.account_number %}
+    <div class="modern-card">
+        <div class="fw-bold small text-primary text-uppercase mb-1" style="letter-spacing: 0.5px;">Bank Payment Details</div>
+        <div class="small text-secondary">
+            <strong>Bank Name:</strong> {{ organization.bank_name|default:'N/A' }} &nbsp;|&nbsp;
+            <strong>Account Name:</strong> {{ organization.account_name|default:organization.name }} &nbsp;|&nbsp;
+            <strong>Account Number:</strong> {{ organization.account_number|default:'N/A' }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Signature Block -->
+    <div class="modern-signature-block">
+        <div class="row">
+            <div class="col-6 offset-6 text-end">
+                <div style="border-bottom: 2px solid #94a3b8; width: 220px; margin-left: auto; margin-bottom: 6px;"></div>
+                <div class="fw-bold text-dark small">Authorized Signature</div>
+                <div class="text-muted extra-small mt-1">Name: ______________________</div>
+                <div class="text-muted extra-small">Position: __________________</div>
+                <div class="text-muted extra-small">Date: ______________________</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modern-footer text-center text-muted small">
+        <div class="fw-semibold text-dark mb-1">Thank you for your business!</div>
+        <div>
+            {{ organization.name }}
+            {% if organization.phone %} &nbsp;•&nbsp; {{ organization.phone }}{% endif %}
+            {% if organization.email %} &nbsp;•&nbsp; {{ organization.email }}{% endif %}
+            {% if organization.website %} &nbsp;•&nbsp; {{ organization.website }}{% endif %}
+        </div>
+    </div>
 </div>
 {% endblock %}

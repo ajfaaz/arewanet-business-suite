@@ -32,26 +32,37 @@
     }
 
     @media print {
-        body * {
-            visibility: hidden;
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
         }
-        .a4-page, .a4-page * {
-            visibility: visible;
+        body, html {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+        .preview-toolbar, .no-print, .navbar, .sidebar, .sidebar-wrapper, nav, header, footer, #sidebar {
+            display: none !important;
+        }
+        .a4-wrapper {
+            padding: 0 !important;
+            background: transparent !important;
+            overflow: visible !important;
         }
         .a4-page {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            box-shadow: none;
-            padding: 20mm;
-        }
-        .preview-toolbar, .navbar, .sidebar, footer {
-            display: none !important;
+            position: static !important;
+            width: 100% !important;
+            min-height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
         }
     }
 </style>
+
 
 <div class="preview-toolbar d-flex flex-wrap align-items-center justify-content-between gap-3">
     <div class="d-flex align-items-center gap-3">
@@ -105,14 +116,15 @@
         </form>
         {% endif %}
 
-        <button type="button" class="btn btn-outline-secondary btn-sm disabled" title="PDF generation feature coming in Part 7">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()" title="Print Quotation">
             <i class="bi bi-printer me-1"></i> Print
         </button>
-        <button type="button" class="btn btn-outline-secondary btn-sm disabled" title="PDF generation feature coming in Part 7">
-            <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+        <button type="button" class="btn btn-outline-secondary btn-sm disabled" title="PDF download coming in Part 7">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF (Part 7)
         </button>
     </div>
 </div>
+
 
 <div class="a4-wrapper">
     <div class="a4-page">

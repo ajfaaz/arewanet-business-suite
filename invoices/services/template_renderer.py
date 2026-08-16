@@ -27,19 +27,51 @@ class QuotationTemplateRenderer:
 
         if isinstance(customer, dict):
             customer_name = customer.get('company_name') or customer.get('name') or 'Valued Customer'
+            customer_contact_person = customer.get('contact_person') or customer.get('contact_name') or ''
             customer_address = customer.get('address', '')
             customer_email = customer.get('email', '')
             customer_phone = customer.get('phone', '')
         elif customer:
             customer_name = getattr(customer, 'company_name', None) or 'Valued Customer'
+            customer_contact_person = getattr(customer, 'contact_person', None) or getattr(customer, 'contact_name', None) or ''
             customer_address = getattr(customer, 'address', '')
             customer_email = getattr(customer, 'email', '')
             customer_phone = getattr(customer, 'phone', '')
         else:
             customer_name = 'Valued Customer'
+            customer_contact_person = ''
             customer_address = ''
             customer_email = ''
             customer_phone = ''
+
+        # Currency Resolution
+        currency_code = 'NGN'
+        if isinstance(quotation, dict) and quotation.get('currency'):
+            currency_code = quotation.get('currency')
+        elif hasattr(quotation, 'currency') and getattr(quotation, 'currency', None):
+            currency_code = getattr(quotation, 'currency')
+        elif org and hasattr(org, 'currency') and org.currency:
+            currency_code = org.currency
+
+        currency_symbols = {
+            'NGN': '₦',
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'CAD': 'CA$',
+            'AUD': 'A$',
+        }
+        currency_symbol = currency_symbols.get(str(currency_code).upper(), str(currency_code))
+
+        # Terms Resolution
+        terms = None
+        if isinstance(quotation, dict):
+            terms = quotation.get('terms')
+        elif hasattr(quotation, 'terms') and quotation.terms:
+            terms = quotation.terms
+
+        if not terms and org and hasattr(org, 'terms') and org.terms:
+            terms = org.terms
 
         if not template:
             service = QuotationTemplateService(organization=org)
@@ -52,9 +84,13 @@ class QuotationTemplateRenderer:
             'organization': org,
             'customer': customer,
             'customer_name': customer_name,
+            'customer_contact_person': customer_contact_person,
             'customer_address': customer_address,
             'customer_email': customer_email,
             'customer_phone': customer_phone,
+            'currency_code': currency_code,
+            'currency_symbol': currency_symbol,
+            'terms': terms,
             'items': items,
             'template': template,
             'style': style,
@@ -62,6 +98,7 @@ class QuotationTemplateRenderer:
             'all_templates': all_templates or [],
             'all_quotations': all_quotations or [],
         }
+
 
         return context
 
