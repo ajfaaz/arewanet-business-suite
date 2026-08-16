@@ -1176,6 +1176,9 @@ def quotation_create(request):
 
             messages.success(request, f"Quotation {quotation.quotation_no} created successfully.")
             return redirect('quotation_detail', pk=quotation.pk)
+        else:
+            messages.error(request, "Unable to save quotation. Please check the highlighted errors below.")
+
     else:
         form = QuotationForm(organization=org)
         formset = QuotationItemFormSet(prefix='items', form_kwargs={'organization': org})
@@ -1298,7 +1301,14 @@ def quotation_delete(request, pk):
 def quotation_template_list(request):
     org = _get_user_organization(request.user)
     service = QuotationTemplateService(organization=org)
+
+    # Ensure organization has an initial default template seeded
+    service.get_default_template()
+
     templates = service.get_templates(include_inactive=True)
+
+    from .permissions import has_permission
+    can_create = has_permission(request.user, "quotation_template.create", request=request)
 
     return render(
         request,
@@ -1306,8 +1316,10 @@ def quotation_template_list(request):
         {
             "templates": templates,
             "organization": org,
+            "can_create": can_create,
         }
     )
+
 
 
 @login_required
@@ -1420,4 +1432,38 @@ def quotation_template_delete(request, pk):
             "template": template,
         }
     )
+
+
+@login_required
+def quotation_template_preview(request, pk):
+    from .permissions import has_permission
+    if not (has_permission(request.user, "quotation_template.view", request=request) or has_permission(request.user, "quotation.view", request=request)):
+        raise PermissionDenied("You do not have permission to view quotation previews.")
+
+    org = _get_user_organization(request.user)
+    template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
+    quotation_id = request.GET.get('quotation')
+    if quotation_id:
+        quotation = get_object_or_404(Quotation, pk=quotation_id, organization=org)
+    else:
+        quotation = QuotationTemplateService.get_demo_quotation_data(org)
+
+    all_templates = QuotationTemplate.objects.filter(organization=org, is_active=True)
+    all_quotations = Quotation.objects.filter(organization=org).order_by('-created_at')[:20]
+
+    from .services.template_renderer import QuotationTemplateRenderer
+    renderer = QuotationTemplateRenderer(organization=org)
+    context = renderer.render_context(
+        quotation=quotation,
+        template=template,
+        all_templates=all_templates,
+        all_quotations=all_quotations
+    )
+
+    style = template.style if hasattr(template, 'style') else 'modern'
+    template_name = QuotationTemplateRenderer.STYLE_TEMPLATE_MAP.get(style, QuotationTemplateRenderer.STYLE_TEMPLATE_MAP['modern'])
+
+    return render(request, template_name, context)
+
 

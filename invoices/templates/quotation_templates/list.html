@@ -13,12 +13,13 @@
             </p>
         </div>
         <div class="mt-2 mt-md-0">
-            {% if membership.role and membership.role.slug == 'administrator' or membership.has_permission and membership.has_permission.quotation_template_create or membership.has_permission and membership.has_permission.quotation_template.create %}
+            {% if can_create %}
             <a href="{% url 'quotation_template_create' %}" class="btn btn-primary btn-sm shadow-sm">
                 <i class="bi bi-plus-lg me-1"></i> New Template
             </a>
             {% endif %}
         </div>
+
     </div>
 
     <!-- Messages Alert -->
@@ -80,18 +81,28 @@
                                 {% endif %}
                             </td>
                             <td class="text-end pe-4">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                        {% if not template.is_default and template.is_active %}
-                                        <li>
-                                            <a class="dropdown-item text-primary" href="{% url 'quotation_template_set_default' template.id %}">
-                                                <i class="bi bi-star me-2"></i>Set as Default
-                                            </a>
-                                        </li>
-                                        {% endif %}
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <a href="{% url 'quotation_template_preview' template.id %}" class="btn btn-sm btn-outline-primary" title="Preview Quotation Template">
+                                        <i class="bi bi-eye me-1"></i>Preview
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Actions
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li>
+                                                <a class="dropdown-item text-primary" href="{% url 'quotation_template_preview' template.id %}">
+                                                    <i class="bi bi-eye me-2"></i>Preview Template
+                                                </a>
+                                            </li>
+                                            {% if not template.is_default and template.is_active %}
+                                            <li>
+                                                <a class="dropdown-item text-success" href="{% url 'quotation_template_set_default' template.id %}">
+                                                    <i class="bi bi-star me-2"></i>Set as Default
+                                                </a>
+                                            </li>
+                                            {% endif %}
+
 
                                         <li>
                                             <a class="dropdown-item" href="{% url 'quotation_template_edit' template.id %}">
@@ -124,10 +135,16 @@
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="bi bi-layout-text-window-reverse fs-1 d-block mb-2 text-secondary"></i>
-                                No quotation templates found for {{ organization.name }}.
+                                <p class="mb-3">No quotation templates found for {{ organization.name }}.</p>
+                                {% if can_create %}
+                                <a href="{% url 'quotation_template_create' %}" class="btn btn-primary btn-sm shadow-sm">
+                                    <i class="bi bi-plus-lg me-1"></i> Create First Template
+                                </a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
+
                     </tbody>
                 </table>
             </div>

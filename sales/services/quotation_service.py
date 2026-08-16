@@ -55,7 +55,10 @@ class QuotationService:
                 )
             else:
                 item.quotation = quotation
+                if not item.description and item.product:
+                    item.description = item.product.name
                 item.save()
+
 
         ref = getattr(quotation, 'quotation_no', getattr(quotation, 'document_number', ''))
         if user:

@@ -153,3 +153,16 @@ class QuotationTemplateCRUDTestCase(TestCase):
         # Delete blocked (403)
         response = self.client.get(reverse("quotation_template_delete", kwargs={"pk": self.tpl_a2.pk}))
         self.assertEqual(response.status_code, 403)
+
+    def test_template_delete_success_and_cross_tenant_isolation(self):
+        self.client.login(username="crud_admin_a", password="password123")
+
+        # Attempt to delete Org B template -> 404
+        response = self.client.post(reverse("quotation_template_delete", kwargs={"pk": self.tpl_b1.pk}))
+        self.assertEqual(response.status_code, 404)
+
+        # Delete non-default Org A template -> 302 redirect to list
+        response = self.client.post(reverse("quotation_template_delete", kwargs={"pk": self.tpl_a2.pk}))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(QuotationTemplate.objects.filter(pk=self.tpl_a2.pk).exists())
+

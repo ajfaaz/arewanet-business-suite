@@ -1,0 +1,137 @@
+{% extends "quotations/preview/base.html" %}
+
+{% block quotation_content %}
+<style>
+    .minimal-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #334155;
+    }
+    .minimal-title {
+        font-size: 32px;
+        font-weight: 300;
+        letter-spacing: -1px;
+        color: #0f172a;
+    }
+    .minimal-divider {
+        border-top: 1px solid #e2e8f0;
+        margin: 25px 0;
+    }
+    .minimal-table {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+    .minimal-table th {
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #64748b;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #0f172a;
+    }
+    .minimal-table td {
+        padding: 16px 0;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+    }
+    .minimal-total {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+</style>
+
+<div class="minimal-container">
+    <div class="d-flex justify-content-between align-items-baseline mb-4">
+        <div>
+            <div class="fw-bold fs-4 text-dark mb-1">{{ organization.name }}</div>
+            <div class="small text-muted">{{ organization.email|default:'' }}</div>
+        </div>
+        <div class="text-end">
+            <div class="minimal-title">QUOTATION</div>
+            <div class="fw-semibold text-secondary">#{{ quotation.quotation_no }}</div>
+        </div>
+    </div>
+
+    <div class="minimal-divider"></div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-6">
+            <div class="text-uppercase small text-muted fw-semibold mb-1" style="letter-spacing: 0.5px;">Prepared For</div>
+            <div class="fw-bold text-dark fs-6">{{ customer_name }}</div>
+            {% if customer_address %}<div class="small text-muted">{{ customer_address }}</div>{% endif %}
+            {% if customer_email %}<div class="small text-muted">{{ customer_email }}</div>{% endif %}
+        </div>
+        <div class="col-6 text-end">
+            <div class="text-uppercase small text-muted fw-semibold mb-1" style="letter-spacing: 0.5px;">Dates</div>
+            <div class="small text-dark"><strong>Issue Date:</strong> {{ quotation.quotation_date|date:"d M Y" }}</div>
+            {% if quotation.valid_until %}
+            <div class="small text-dark"><strong>Valid Until:</strong> {{ quotation.valid_until|date:"d M Y" }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <table class="minimal-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th class="text-center" style="width: 10%;">Qty</th>
+                <th class="text-end" style="width: 20%;">Price</th>
+                <th class="text-end" style="width: 22%;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="fw-medium text-dark">{{ item.description }}</td>
+                <td class="text-center">{{ item.qty }}</td>
+                <td class="text-end">₦{{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-end fw-semibold">₦{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">No line items included.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="row justify-content-end mb-4">
+        <div class="col-5">
+            <div class="d-flex justify-content-between mb-2 small text-muted">
+                <span>Subtotal</span>
+                <span>₦{{ quotation.subtotal|floatformat:2 }}</span>
+            </div>
+            {% if quotation.vat or quotation.vat_amount %}
+            <div class="d-flex justify-content-between mb-2 small text-muted">
+                <span>Tax</span>
+                <span>₦{{ quotation.vat_amount|default:'0.00'|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.discount and quotation.discount > 0 %}
+            <div class="d-flex justify-content-between mb-2 small text-danger">
+                <span>Discount</span>
+                <span>-₦{{ quotation.discount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="minimal-divider my-2"></div>
+            <div class="d-flex justify-content-between align-items-baseline">
+                <span class="fw-bold text-uppercase small text-dark" style="letter-spacing: 0.5px;">Total</span>
+                <span class="minimal-total">₦{{ quotation.total|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if quotation.terms %}
+    <div class="minimal-divider"></div>
+    <div>
+        <div class="text-uppercase small text-muted fw-semibold mb-1" style="letter-spacing: 0.5px;">Terms</div>
+        <div class="small text-muted" style="white-space: pre-line;">{{ quotation.terms }}</div>
+    </div>
+    {% endif %}
+
+    <div class="mt-5 pt-4 text-muted small text-center">
+        {{ organization.name }} {% if organization.phone %}• {{ organization.phone }}{% endif %}
+    </div>
+</div>
+{% endblock %}

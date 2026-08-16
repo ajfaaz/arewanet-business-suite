@@ -1,0 +1,197 @@
+{% extends "quotations/preview/base.html" %}
+
+{% block quotation_content %}
+<style>
+    .modern-header {
+        border-bottom: 3px solid #2563eb;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .modern-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1e293b;
+        letter-spacing: -0.5px;
+    }
+    .modern-meta-box {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 16px;
+    }
+    .modern-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-bottom: 30px;
+    }
+    .modern-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 12px 16px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .modern-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+    }
+    .modern-total-box {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .modern-grand-total {
+        font-size: 20px;
+        font-weight: 700;
+        color: #2563eb;
+    }
+    .modern-card {
+        background: #f8fafc;
+        border-left: 4px solid #2563eb;
+        padding: 14px 18px;
+        border-radius: 0 6px 6px 0;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="modern-header d-flex justify-content-between align-items-start">
+    <div>
+        {% if organization.logo %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 50px; margin-bottom: 10px;">
+        {% else %}
+        <div class="fw-bold fs-4 text-primary mb-1">{{ organization.name }}</div>
+        {% endif %}
+        <div class="text-muted small">
+            {{ organization.address|default:'' }}<br>
+            {% if organization.phone %}Phone: {{ organization.phone }}{% endif %}
+            {% if organization.email %} | Email: {{ organization.email }}{% endif %}
+        </div>
+    </div>
+    <div class="text-end">
+        <div class="modern-title text-uppercase">Quotation</div>
+        <div class="fw-bold text-dark fs-5">#{{ quotation.quotation_no }}</div>
+        <div class="text-muted small mt-1">
+            <strong>Date:</strong> {{ quotation.quotation_date|date:"d M Y" }}<br>
+            {% if quotation.valid_until %}<strong>Valid Until:</strong> {{ quotation.valid_until|date:"d M Y" }}{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-6">
+        <div class="modern-meta-box">
+            <div class="text-uppercase text-muted fw-bold small mb-2" style="letter-spacing: 0.5px;">Quoted To</div>
+            <div class="fw-bold fs-6 text-dark">{{ customer_name }}</div>
+            {% if customer_address %}<div class="small text-muted mt-1">{{ customer_address }}</div>{% endif %}
+            <div class="small text-muted">
+                {% if customer_email %}{{ customer_email }}{% endif %}
+                {% if customer_phone %} | {{ customer_phone }}{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="modern-meta-box">
+            <div class="text-uppercase text-muted fw-bold small mb-2" style="letter-spacing: 0.5px;">Quotation Summary</div>
+            <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Status:</span>
+                <span class="badge bg-secondary">{{ quotation.status|default:'DRAFT' }}</span>
+            </div>
+            <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Currency:</span>
+                <span class="fw-semibold">NGN (₦)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<table class="modern-table">
+    <thead>
+        <tr>
+            <th style="width: 8%;">#</th>
+            <th>Item & Description</th>
+            <th class="text-center" style="width: 12%;">Qty</th>
+            <th class="text-end" style="width: 20%;">Unit Price</th>
+            <th class="text-end" style="width: 22%;">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td class="text-muted">{{ forloop.counter }}</td>
+            <td>
+                <div class="fw-semibold text-dark">{{ item.description }}</div>
+            </td>
+            <td class="text-center">{{ item.qty }}</td>
+            <td class="text-end">₦{{ item.unit_price|floatformat:2 }}</td>
+            <td class="text-end fw-semibold">₦{{ item.total|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-center text-muted py-4">No line items included in this quotation.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="row justify-content-end mb-4">
+    <div class="col-5">
+        <div class="modern-total-box">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted small">Subtotal</span>
+                <span class="fw-semibold">₦{{ quotation.subtotal|floatformat:2 }}</span>
+            </div>
+            {% if quotation.vat or quotation.vat_amount %}
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted small">VAT ({{ quotation.vat|default:'7.5' }}%)</span>
+                <span>₦{{ quotation.vat_amount|default:'0.00'|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.discount and quotation.discount > 0 %}
+            <div class="d-flex justify-content-between mb-2 text-danger">
+                <span class="small">Discount</span>
+                <span>-₦{{ quotation.discount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <hr class="my-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-dark">Grand Total</span>
+                <span class="modern-grand-total">₦{{ quotation.total|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if quotation.notes %}
+<div class="modern-card">
+    <div class="fw-bold small text-primary text-uppercase mb-1">Notes</div>
+    <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.notes }}</div>
+</div>
+{% endif %}
+
+{% if quotation.terms %}
+<div class="modern-card">
+    <div class="fw-bold small text-primary text-uppercase mb-1">Terms & Conditions</div>
+    <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.terms }}</div>
+</div>
+{% endif %}
+
+{% if organization.bank_name or organization.account_number %}
+<div class="modern-card">
+    <div class="fw-bold small text-primary text-uppercase mb-1">Banking Information</div>
+    <div class="small text-secondary">
+        <strong>Bank:</strong> {{ organization.bank_name|default:'N/A' }} |
+        <strong>Account Name:</strong> {{ organization.account_name|default:organization.name }} |
+        <strong>Account No:</strong> {{ organization.account_number|default:'N/A' }}
+    </div>
+</div>
+{% endif %}
+
+<div class="text-center text-muted small mt-5 pt-4 border-top">
+    Thank you for your business! — <strong>{{ organization.name }}</strong>
+</div>
+{% endblock %}

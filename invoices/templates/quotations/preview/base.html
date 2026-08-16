@@ -1,0 +1,123 @@
+{% extends "sales/base_sales.html" %}
+{% load static %}
+
+{% block sales_content %}
+<style>
+    .preview-toolbar {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .a4-wrapper {
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+    .a4-page {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 40mm 25mm 25mm 25mm;
+        margin: 0 auto;
+        background: #ffffff;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: #1e293b;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .a4-page, .a4-page * {
+            visibility: visible;
+        }
+        .a4-page {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            box-shadow: none;
+            padding: 20mm;
+        }
+        .preview-toolbar, .navbar, .sidebar, footer {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="preview-toolbar d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+        <a href="{% url 'quotation_template_list' %}" class="abs-btn abs-btn-outline btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Templates
+        </a>
+        <span class="badge bg-primary px-3 py-2 fs-6">
+            {{ template.name }} ({{ template.get_style_display }})
+        </span>
+        {% if is_demo %}
+        <span class="badge bg-secondary px-3 py-2 fs-6">
+            <i class="bi bi-info-circle me-1"></i> Safe Demo Data
+        </span>
+        {% else %}
+        <span class="badge bg-success px-3 py-2 fs-6">
+            <i class="bi bi-check-circle me-1"></i> Real Quotation #{{ quotation.quotation_no }}
+        </span>
+        {% endif %}
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        {% if all_templates %}
+        <form method="GET" class="d-flex align-items-center gap-2 m-0">
+            {% if quotation.pk %}
+            <input type="hidden" name="quotation" value="{{ quotation.pk }}">
+            {% endif %}
+            <label class="form-label mb-0 fw-semibold text-muted small">Template:</label>
+            <select name="template_select" class="form-select form-select-sm" onchange="location = this.value;">
+                {% for tpl in all_templates %}
+                <option value="{% url 'quotation_template_preview' tpl.pk %}{% if quotation.pk %}?quotation={{ quotation.pk }}{% endif %}" {% if tpl.pk == template.pk %}selected{% endif %}>
+                    {{ tpl.name }} ({{ tpl.get_style_display }})
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+
+        {% if all_quotations %}
+        <form method="GET" class="d-flex align-items-center gap-2 m-0">
+            <label class="form-label mb-0 fw-semibold text-muted small">Quotation:</label>
+            <select name="quotation_select" class="form-select form-select-sm" onchange="location = this.value;">
+                <option value="{% url 'quotation_template_preview' template.pk %}" {% if is_demo %}selected{% endif %}>
+                    -- Safe Demo Data --
+                </option>
+                {% for q in all_quotations %}
+                <option value="{% url 'quotation_template_preview' template.pk %}?quotation={{ q.pk }}" {% if quotation.pk == q.pk %}selected{% endif %}>
+                    {{ q.quotation_no }} ({{ q.customer.company_name|default:'No Customer' }})
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+
+        <button type="button" class="btn btn-outline-secondary btn-sm disabled" title="PDF generation feature coming in Part 7">
+            <i class="bi bi-printer me-1"></i> Print
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm disabled" title="PDF generation feature coming in Part 7">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+        </button>
+    </div>
+</div>
+
+<div class="a4-wrapper">
+    <div class="a4-page">
+        {% block quotation_content %}
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

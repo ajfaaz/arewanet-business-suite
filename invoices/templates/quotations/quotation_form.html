@@ -6,6 +6,31 @@
 {% url 'quotation_list' as quotation_list_url %}
 {% include "components/layout/page_header.html" with title="Create Quotation" subtitle="Generate a formal cost estimation proposal" button_text="Back" button_url=quotation_list_url button_icon="arrow-left" %}
 
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show mb-4 shadow-sm" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if form.errors or formset.errors %}
+<div class="alert alert-danger mb-4 shadow-sm">
+    <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Validation Errors:</h6>
+    <ul class="mb-0 ps-3">
+        {% for field, errors in form.errors.items %}
+        <li><strong>{{ field|title }}:</strong> {{ errors.0 }}</li>
+        {% endfor %}
+        {% for form_in_set in formset %}
+            {% for field, errors in form_in_set.errors.items %}
+            <li><strong>Line Item {{ forloop.parentloop.counter }} ({{ field|title }}):</strong> {{ errors.0 }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <form method="POST">
     {% csrf_token %}
     <div class="row">
@@ -15,28 +40,34 @@
                 <div class="abs-card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Customer</label>
+                            <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
                             {{ form.customer }}
+                            {% if form.customer.errors %}<div class="text-danger small mt-1">{{ form.customer.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Quotation Date</label>
+                            <label class="form-label fw-semibold">Quotation Date <span class="text-danger">*</span></label>
                             {{ form.quotation_date }}
+                            {% if form.quotation_date.errors %}<div class="text-danger small mt-1">{{ form.quotation_date.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Valid Until</label>
                             {{ form.valid_until }}
+                            {% if form.valid_until.errors %}<div class="text-danger small mt-1">{{ form.valid_until.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Status</label>
                             {{ form.status }}
+                            {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">VAT Rate (%)</label>
                             {{ form.vat }}
+                            {% if form.vat.errors %}<div class="text-danger small mt-1">{{ form.vat.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Discount Amount</label>
                             {{ form.discount }}
+                            {% if form.discount.errors %}<div class="text-danger small mt-1">{{ form.discount.errors.0 }}</div>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -59,10 +90,26 @@
                             <tbody>
                                 {% for item_form in formset %}
                                 <tr>
-                                    <td>{{ item_form.product }}</td>
-                                    <td>{{ item_form.description }}</td>
-                                    <td>{{ item_form.qty }}</td>
-                                    <td>{{ item_form.unit_price }}</td>
+                                    {% for hidden in item_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                    {{ item_form.discount.as_hidden }}
+                                    <td>
+                                        {{ item_form.product }}
+                                        {% if item_form.product.errors %}<div class="text-danger small mt-1">{{ item_form.product.errors.0 }}</div>{% endif %}
+                                    </td>
+                                    <td>
+                                        {{ item_form.description }}
+                                        {% if item_form.description.errors %}<div class="text-danger small mt-1">{{ item_form.description.errors.0 }}</div>{% endif %}
+                                    </td>
+                                    <td>
+                                        {{ item_form.qty }}
+                                        {% if item_form.qty.errors %}<div class="text-danger small mt-1">{{ item_form.qty.errors.0 }}</div>{% endif %}
+                                    </td>
+                                    <td>
+                                        {{ item_form.unit_price }}
+                                        {% if item_form.unit_price.errors %}<div class="text-danger small mt-1">{{ item_form.unit_price.errors.0 }}</div>{% endif %}
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -82,9 +129,16 @@
             </div>
 
             <div class="abs-card mb-4">
-                <div class="abs-card-header">Terms & Conditions</div>
+                <div class="abs-card-header">Notes & Terms</div>
                 <div class="abs-card-body">
-                    {{ form.terms }}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Internal Notes</label>
+                        {{ form.notes }}
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold">Terms & Conditions</label>
+                        {{ form.terms }}
+                    </div>
                 </div>
             </div>
         </div>

@@ -64,3 +64,56 @@ class QuotationTemplateService:
             is_active=True,
             is_default=is_default
         )
+
+    @classmethod
+    def get_demo_quotation_data(cls, organization):
+        from decimal import Decimal
+        from datetime import date, timedelta
+
+        today = date.today()
+        valid_until = today + timedelta(days=14)
+
+        items = [
+            {
+                'description': 'Professional Software Development & Architecture',
+                'qty': Decimal("2.00"),
+                'unit_price': Decimal("100000.00"),
+                'total': Decimal("200000.00"),
+            },
+            {
+                'description': 'System Setup, Infrastructure & Cloud Consultation',
+                'qty': Decimal("1.00"),
+                'unit_price': Decimal("50000.00"),
+                'total': Decimal("50000.00"),
+            }
+        ]
+
+        subtotal = Decimal("250000.00")
+        vat_rate = Decimal("7.50")
+        vat_amount = Decimal("18750.00")
+        discount = Decimal("0.00")
+        total = Decimal("268750.00")
+
+        return {
+            'is_demo': True,
+            'quotation_no': 'QT-DEMO-0001',
+            'quotation_date': today,
+            'valid_until': valid_until,
+            'status': 'DRAFT',
+            'customer': {
+                'company_name': 'Demo Customer Ltd',
+                'name': 'John Doe',
+                'email': 'customer@demo.example.com',
+                'phone': '+234 800 123 4567',
+                'address': '123 Commercial Avenue, Victoria Island, Lagos'
+            },
+            'items': items,
+            'subtotal': subtotal,
+            'vat': vat_rate,
+            'vat_amount': vat_amount,
+            'discount': discount,
+            'total': total,
+            'notes': 'Thank you for giving us the opportunity to submit this proposal.',
+            'terms': '1. Prices are valid for 14 days from issue date.\n2. Payment terms: 50% advance upon confirmation, 50% upon delivery.\n3. All figures in Nigerian Naira (NGN).'
+        }
+

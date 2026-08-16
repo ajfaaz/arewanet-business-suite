@@ -116,6 +116,12 @@ InvoiceItemFormSet = inlineformset_factory(
 
 
 class QuotationForm(forms.ModelForm):
+    vat = forms.DecimalField(required=False, initial=0, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    discount = forms.DecimalField(required=False, initial=0, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    valid_until = forms.DateField(required=False, widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}))
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+    terms = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+
     class Meta:
         model = Quotation
         fields = [
@@ -131,12 +137,7 @@ class QuotationForm(forms.ModelForm):
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-select'}),
             'quotation_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'valid_until': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
-            'vat': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'terms': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -150,6 +151,26 @@ class QuotationForm(forms.ModelForm):
 
 
 class QuotationItemForm(forms.ModelForm):
+    description = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control description'})
+    )
+    qty = forms.DecimalField(
+        required=False,
+        initial=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control qty', 'step': '0.01'})
+    )
+    unit_price = forms.DecimalField(
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control unit-price', 'step': '0.01'})
+    )
+    discount = forms.DecimalField(
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control discount', 'step': '0.01'})
+    )
+
     class Meta:
         model = QuotationItem
         fields = [
@@ -161,10 +182,6 @@ class QuotationItemForm(forms.ModelForm):
         ]
         widgets = {
             'product': forms.Select(attrs={'class': 'form-select product-select'}),
-            'description': forms.TextInput(attrs={'class': 'form-control description'}),
-            'qty': forms.NumberInput(attrs={'class': 'form-control qty'}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control unit-price'}),
-            'discount': forms.NumberInput(attrs={'class': 'form-control discount'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -176,6 +193,36 @@ class QuotationItemForm(forms.ModelForm):
                 active=True
             )
         self.fields['product'].empty_label = "-- Select Product --"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        product = cleaned_data.get('product')
+        description = cleaned_data.get('description')
+        qty = cleaned_data.get('qty')
+        unit_price = cleaned_data.get('unit_price')
+        discount = cleaned_data.get('discount')
+
+        if qty is None:
+            cleaned_data['qty'] = 1
+            self.cleaned_data['qty'] = 1
+
+        if unit_price is None:
+            price = product.selling_price if product else 0
+            cleaned_data['unit_price'] = price
+            self.cleaned_data['unit_price'] = price
+
+        if discount is None:
+            cleaned_data['discount'] = 0
+            self.cleaned_data['discount'] = 0
+
+        if not description:
+            desc = product.name if product else "Quotation Item"
+            cleaned_data['description'] = desc
+            self.cleaned_data['description'] = desc
+
+        return cleaned_data
+
+
 
 
 QuotationItemFormSet = inlineformset_factory(
