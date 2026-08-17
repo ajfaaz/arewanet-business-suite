@@ -221,4 +221,13 @@ urlpatterns = [
 
     # Subscriptions & Recurring Billing
     path('subscriptions/', include('sales.subscriptions.urls')),
+
+    # System Settings & Admin Dashboard
+    path('settings/', views.admin_settings_dashboard, name='admin_settings_dashboard'),
+    path('settings/organization/', views.organization_settings_update, name='organization_settings_update'),
+    path('settings/members/create/', views.member_create, name='member_create'),
+    path('settings/members/<int:pk>/edit/', views.member_edit, name='member_edit'),
+    path('settings/members/<int:pk>/toggle/', views.member_toggle_active, name='member_toggle_active'),
+    path('settings/roles/create/', views.role_create, name='role_create'),
+    path('settings/roles/<int:pk>/edit/', views.role_edit, name='role_edit'),
 ]

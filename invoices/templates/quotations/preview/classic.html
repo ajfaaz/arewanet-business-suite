@@ -1,175 +1,178 @@
 {% extends "quotations/preview/base.html" %}
+{% load static %}
 
 {% block quotation_content %}
-<style>
-    .classic-header-border {
-        border-bottom: 2px solid #0f172a;
-        padding-bottom: 15px;
-        margin-bottom: 25px;
-    }
-    .classic-title {
-        font-size: 24px;
-        font-weight: 700;
-        font-family: Georgia, serif;
-        text-align: center;
-        letter-spacing: 2px;
-        margin-bottom: 25px;
-        text-transform: uppercase;
-        color: #0f172a;
-    }
-    .classic-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 25px;
-    }
-    .classic-table th {
-        background: #1e293b;
-        color: #ffffff;
-        font-weight: 600;
-        font-size: 13px;
-        padding: 10px 12px;
-        border: 1px solid #1e293b;
-    }
-    .classic-table td {
-        padding: 10px 12px;
-        border: 1px solid #cbd5e1;
-        font-size: 13px;
-    }
-    .classic-box {
-        border: 1px solid #cbd5e1;
-        padding: 15px;
-        border-radius: 4px;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'quotations/classic.css' %}">
 
-<div class="classic-header-border d-flex justify-content-between align-items-center">
-    <div>
-        <h2 class="fw-bold m-0" style="font-family: Georgia, serif; color: #0f172a;">{{ organization.name }}</h2>
-        <div class="small text-secondary mt-1">
-            {{ organization.address|default:'' }}<br>
-            Phone: {{ organization.phone|default:'N/A' }} | Email: {{ organization.email|default:'N/A' }}
+<div class="classic-doc">
+    <!-- Top Header & Branding -->
+    <div class="classic-header d-flex justify-content-between align-items-start">
+        <div style="max-width: 65%;">
+            {% if organization.logo %}
+            <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 60px; max-width: 220px; margin-bottom: 8px; object-fit: contain;">
+            <div class="classic-company-name mb-1" style="font-size: 20px;">{{ organization.name }}</div>
+            {% else %}
+            <div class="classic-company-name">{{ organization.name }}</div>
+            {% endif %}
+            <div class="classic-company-meta">
+                {% if organization.address %}{{ organization.address|linebreaksbr }}<br>{% endif %}
+                {% if organization.phone %}Phone: {{ organization.phone }}{% endif %}
+                {% if organization.email %} | Email: {{ organization.email }}{% endif %}
+                {% if organization.website %}<br>Website: {{ organization.website }}{% endif %}
+            </div>
+        </div>
+        <div class="text-end font-monospace small">
+            <div class="fw-bold text-uppercase text-secondary">Document Ref</div>
+            <div class="fw-bold text-dark fs-6">{{ quotation.quotation_no }}</div>
+            <div class="text-muted mt-1">Status: <span class="badge bg-secondary text-uppercase">{{ quotation.status|default:'DRAFT' }}</span></div>
         </div>
     </div>
-    <div class="text-end">
-        {% if organization.logo %}
-        <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="max-height: 55px;">
-        {% endif %}
-    </div>
-</div>
 
-<div class="classic-title">Formal Cost Quotation</div>
+    <!-- Centered Document Title -->
+    <div class="classic-doc-title">QUOTATION</div>
 
-<div class="row g-3 mb-4">
-    <div class="col-6">
-        <div class="classic-box h-100">
-            <div class="fw-bold text-uppercase small text-secondary border-bottom pb-1 mb-2">Customer Details</div>
-            <div class="fw-bold text-dark fs-6">{{ customer_name }}</div>
-            {% if customer_address %}<div class="small text-muted">{{ customer_address }}</div>{% endif %}
-            <div class="small text-muted">Email: {{ customer_email|default:'N/A' }} | Tel: {{ customer_phone|default:'N/A' }}</div>
+    <!-- Document Meta & Customer Info Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-7">
+            <div class="classic-box h-100">
+                <div class="classic-box-title">Customer Information</div>
+                <div class="fw-bold text-dark fs-6 mb-1">{{ customer_name }}</div>
+                {% if customer_contact_person %}
+                <div class="small text-secondary fw-semibold mb-1">Attn: {{ customer_contact_person }}</div>
+                {% endif %}
+                {% if customer_address %}
+                <div class="small text-muted mb-1" style="white-space: pre-line;">{{ customer_address }}</div>
+                {% endif %}
+                <div class="small text-muted">
+                    {% if customer_phone %}Phone: {{ customer_phone }}{% endif %}
+                    {% if customer_email %} | Email: {{ customer_email }}{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-5">
+            <div class="classic-box h-100">
+                <div class="classic-box-title">Quotation Details</div>
+                <table class="w-100 small">
+                    <tr>
+                        <td class="text-muted py-1">Quote No:</td>
+                        <td class="fw-bold text-end py-1">{{ quotation.quotation_no }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted py-1">Date:</td>
+                        <td class="fw-semibold text-end py-1">{{ quotation.quotation_date|date:"d M Y" }}</td>
+                    </tr>
+                    {% if quotation.valid_until %}
+                    <tr>
+                        <td class="text-muted py-1">Valid Until:</td>
+                        <td class="fw-semibold text-end py-1">{{ quotation.valid_until|date:"d M Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted py-1">Currency:</td>
+                        <td class="fw-semibold text-end py-1">{{ currency_code }} ({{ currency_symbol }})</td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
-    <div class="col-6">
-        <div class="classic-box h-100">
-            <div class="fw-bold text-uppercase small text-secondary border-bottom pb-1 mb-2">Quotation Details</div>
-            <table class="w-100 small">
+
+    <!-- Classic Items Table -->
+    <table class="classic-table">
+        <thead>
+            <tr>
+                <th style="width: 7%;" class="text-center">S/N</th>
+                <th>Description</th>
+                <th class="text-center" style="width: 10%;">Qty</th>
+                <th class="text-end" style="width: 22%;">Unit Price</th>
+                <th class="text-end" style="width: 22%;">Total ({{ currency_symbol }})</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="text-center text-muted font-monospace">{{ forloop.counter }}</td>
+                <td class="fw-medium text-dark">{{ item.description }}</td>
+                <td class="text-center fw-semibold">{{ item.qty }}</td>
+                <td class="text-end">{{ currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-end fw-bold text-dark">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted py-3">No line items included in this quotation.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Financial Totals Block -->
+    <div class="row justify-content-end mb-4">
+        <div class="col-6 col-md-5">
+            <table class="classic-summary-table">
                 <tr>
-                    <td class="text-muted py-1">Quotation No:</td>
-                    <td class="fw-bold text-end py-1">{{ quotation.quotation_no }}</td>
+                    <td class="text-muted fw-semibold">Subtotal</td>
+                    <td class="text-end fw-bold text-dark">{{ currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</td>
                 </tr>
-                <tr>
-                    <td class="text-muted py-1">Date Issued:</td>
-                    <td class="fw-semibold text-end py-1">{{ quotation.quotation_date|date:"d M Y" }}</td>
-                </tr>
-                {% if quotation.valid_until %}
-                <tr>
-                    <td class="text-muted py-1">Valid Until:</td>
-                    <td class="fw-semibold text-end py-1">{{ quotation.valid_until|date:"d M Y" }}</td>
+                {% if quotation.discount and quotation.discount > 0 %}
+                <tr class="text-danger">
+                    <td class="fw-semibold">Discount</td>
+                    <td class="text-end fw-bold">-{{ currency_symbol }}{{ quotation.discount|floatformat:2 }}</td>
                 </tr>
                 {% endif %}
+                {% if quotation.vat or quotation.vat_amount %}
                 <tr>
-                    <td class="text-muted py-1">Status:</td>
-                    <td class="text-end py-1"><span class="badge bg-dark">{{ quotation.status|default:'DRAFT' }}</span></td>
+                    <td class="text-muted fw-semibold">Tax / VAT ({% if quotation.vat %}{{ quotation.vat }}{% else %}{{ organization.default_vat|default:'7.5' }}{% endif %}%)</td>
+                    <td class="text-end text-dark">{{ currency_symbol }}{{ quotation.vat_amount|default:'0.00'|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+                <tr class="grand-total-row">
+                    <td>TOTAL</td>
+                    <td class="text-end fs-6">{{ currency_symbol }}{{ quotation.total|floatformat:2 }}</td>
                 </tr>
             </table>
         </div>
     </div>
-</div>
 
-<table class="classic-table">
-    <thead>
-        <tr>
-            <th style="width: 8%;">S/N</th>
-            <th>Item Description</th>
-            <th class="text-center" style="width: 12%;">Qty</th>
-            <th class="text-end" style="width: 20%;">Unit Price (₦)</th>
-            <th class="text-end" style="width: 22%;">Total (₦)</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in items %}
-        <tr>
-            <td class="text-center">{{ forloop.counter }}</td>
-            <td>{{ item.description }}</td>
-            <td class="text-center">{{ item.qty }}</td>
-            <td class="text-end">{{ item.unit_price|floatformat:2 }}</td>
-            <td class="text-end fw-semibold">{{ item.total|floatformat:2 }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5" class="text-center text-muted py-3">No line items included.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<div class="row justify-content-end mb-4">
-    <div class="col-6">
-        <table class="table table-bordered table-sm small">
-            <tr>
-                <td class="fw-semibold text-secondary">Subtotal</td>
-                <td class="text-end fw-bold">₦{{ quotation.subtotal|floatformat:2 }}</td>
-            </tr>
-            {% if quotation.vat or quotation.vat_amount %}
-            <tr>
-                <td class="text-secondary">VAT ({{ quotation.vat|default:'7.5' }}%)</td>
-                <td class="text-end">₦{{ quotation.vat_amount|default:'0.00'|floatformat:2 }}</td>
-            </tr>
-            {% endif %}
-            {% if quotation.discount and quotation.discount > 0 %}
-            <tr class="text-danger">
-                <td>Less Discount</td>
-                <td class="text-end">-₦{{ quotation.discount|floatformat:2 }}</td>
-            </tr>
-            {% endif %}
-            <tr class="table-dark">
-                <td class="fw-bold">GRAND TOTAL</td>
-                <td class="text-end fw-bold fs-6">₦{{ quotation.total|floatformat:2 }}</td>
-            </tr>
-        </table>
+    <!-- Notes Section -->
+    {% if quotation.notes %}
+    <div class="classic-section-box">
+        <div class="classic-section-title">Notes</div>
+        <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.notes }}</div>
     </div>
-</div>
+    {% endif %}
 
-{% if quotation.terms %}
-<div class="classic-box mb-3">
-    <div class="fw-bold small text-uppercase mb-1 border-bottom pb-1">Terms & Conditions</div>
-    <div class="small text-secondary" style="white-space: pre-line;">{{ quotation.terms }}</div>
-</div>
-{% endif %}
-
-{% if organization.bank_name or organization.account_number %}
-<div class="classic-box mb-4">
-    <div class="fw-bold small text-uppercase mb-1 border-bottom pb-1">Bank Payment Details</div>
-    <div class="small text-secondary">
-        <strong>Bank Name:</strong> {{ organization.bank_name|default:'N/A' }} |
-        <strong>Account Name:</strong> {{ organization.account_name|default:organization.name }} |
-        <strong>Account No:</strong> {{ organization.account_number|default:'N/A' }}
+    <!-- Terms & Conditions Section -->
+    {% if terms %}
+    <div class="classic-section-box">
+        <div class="classic-section-title">Terms & Conditions</div>
+        <div class="small text-secondary" style="white-space: pre-line;">{{ terms }}</div>
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
-<div class="row mt-5 pt-4 text-center">
-    <div class="col-6 offset-6">
-        <div class="border-top pt-2 small fw-bold">Authorized Signature & Stamp</div>
+    <!-- Bank Payment Details Section -->
+    {% if organization.bank_name or organization.account_number %}
+    <div class="classic-section-box">
+        <div class="classic-section-title">Bank Details</div>
+        <div class="small text-secondary">
+            <strong>Bank Name:</strong> {{ organization.bank_name|default:'N/A' }} &nbsp;|&nbsp;
+            <strong>Account Name:</strong> {{ organization.account_name|default:organization.name }} &nbsp;|&nbsp;
+            <strong>Account Number:</strong> {{ organization.account_number|default:'N/A' }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Authorized Signature Block -->
+    <div class="classic-signature-block">
+        <div class="row">
+            <div class="col-6 offset-6 text-end">
+                <div style="border-bottom: 1px solid #0f172a; width: 220px; margin-left: auto; margin-bottom: 6px;"></div>
+                <div class="fw-bold text-dark small" style="font-family: Georgia, serif;">Authorized Signature</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="classic-footer small">
+        Thank you for your business.
     </div>
 </div>
 {% endblock %}

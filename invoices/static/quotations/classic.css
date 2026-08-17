@@ -1,0 +1,143 @@
+/* Classic Quotation Template Styles */
+.classic-doc {
+    color: #0f172a;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    line-height: 1.5;
+}
+
+.classic-header {
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.classic-company-name {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: Georgia, serif;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.classic-company-meta {
+    font-size: 13px;
+    color: #475569;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.classic-doc-title {
+    font-size: 26px;
+    font-weight: 700;
+    font-family: Georgia, serif;
+    text-align: center;
+    letter-spacing: 2px;
+    margin: 20px 0 24px 0;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.classic-box {
+    border: 1px solid #cbd5e1;
+    padding: 16px;
+    border-radius: 2px;
+    background: #ffffff;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.classic-box-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #475569;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+}
+
+.classic-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    font-family: system-ui, -apple-system, sans-serif;
+    page-break-inside: auto;
+}
+
+.classic-table th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    border: 1px solid #1e293b;
+}
+
+.classic-table tr {
+    page-break-inside: avoid;
+}
+
+.classic-table td {
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    font-size: 13px;
+    color: #1e293b;
+}
+
+.classic-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    page-break-inside: avoid;
+}
+
+.classic-summary-table td {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+}
+
+.classic-summary-table .grand-total-row td {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.classic-section-box {
+    border: 1px solid #cbd5e1;
+    padding: 14px 16px;
+    border-radius: 2px;
+    margin-bottom: 18px;
+    font-family: system-ui, -apple-system, sans-serif;
+    page-break-inside: avoid;
+}
+
+.classic-section-title {
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #1e293b;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+}
+
+.classic-signature-block {
+    margin-top: 45px;
+    font-family: system-ui, -apple-system, sans-serif;
+    page-break-inside: avoid;
+}
+
+.classic-footer {
+    border-top: 1px solid #cbd5e1;
+    padding-top: 16px;
+    margin-top: 36px;
+    font-family: Georgia, serif;
+    font-style: italic;
+    color: #475569;
+    text-align: center;
+    page-break-inside: avoid;
+}

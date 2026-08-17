@@ -24,7 +24,8 @@
                 <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="userMenuDropdown">
                     <li class="dropdown-header text-xs text-muted">Signed in as <strong>{{ request.user.username }}</strong></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-xs" href="/admin/"><i class="bi bi-gear me-2"></i>Administration</a></li>
+                    <li><a class="dropdown-item text-xs" href="{% url 'admin_settings_dashboard' %}"><i class="bi bi-gear me-2"></i>Settings & Administration</a></li>
+
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-xs text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                 </ul>

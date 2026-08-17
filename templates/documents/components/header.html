@@ -22,6 +22,10 @@
         </div>
         <div class="mt-2">
             <span class="badge-custom {{ status_badge_class }}">{{ status_display }}</span>
+            {% if document.template %}
+            <span class="badge bg-dark text-white ms-1" style="font-size: 11px; padding: 4px 8px;">Template: {{ document.template.name }}</span>
+            {% endif %}
         </div>
+
     </div>
 </div>

@@ -59,6 +59,12 @@
                             {{ form.status }}
                             {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>{% endif %}
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Quotation Template</label>
+                            {{ form.template }}
+                            {% if form.template.errors %}<div class="text-danger small mt-1">{{ form.template.errors.0 }}</div>{% endif %}
+                        </div>
+
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">VAT Rate (%)</label>
                             {{ form.vat }}

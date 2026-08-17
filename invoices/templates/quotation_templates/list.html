@@ -42,6 +42,7 @@
                             <th class="ps-4 py-3">Template Name</th>
                             <th class="py-3">Style</th>
                             <th class="py-3">Status</th>
+                            <th class="py-3">Used</th>
                             <th class="py-3">Default</th>
                             <th class="py-3 text-end pe-4">Actions</th>
                         </tr>
@@ -72,6 +73,11 @@
                                 {% endif %}
                             </td>
                             <td>
+                                <span class="badge bg-light text-dark border px-2 py-1">
+                                    <i class="bi bi-file-earmark-text me-1"></i>{{ template.quotations.count }}
+                                </span>
+                            </td>
+                            <td>
                                 {% if template.is_default %}
                                 <span class="badge bg-primary px-3 py-1 shadow-sm">
                                     <i class="bi bi-star-fill me-1"></i>Default
@@ -80,6 +86,7 @@
                                 <span class="text-muted small">—</span>
                                 {% endif %}
                             </td>
+
                             <td class="text-end pe-4">
                                 <div class="d-inline-flex align-items-center gap-1">
                                     <a href="{% url 'quotation_template_preview' template.id %}" class="btn btn-sm btn-outline-primary" title="Preview Quotation Template">

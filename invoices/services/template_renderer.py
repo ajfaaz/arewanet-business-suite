@@ -74,10 +74,15 @@ class QuotationTemplateRenderer:
             terms = org.terms
 
         if not template:
-            service = QuotationTemplateService(organization=org)
-            template = service.get_default_template()
+            from invoices.services.quotation_template_resolver import QuotationTemplateResolver
+            template = QuotationTemplateResolver.resolve(
+                organization=org,
+                quotation=quotation if not isinstance(quotation, dict) else None
+            )
 
-        style = template.style if template and hasattr(template, 'style') else 'modern'
+
+        raw_style = template.style if template and hasattr(template, 'style') else 'modern'
+        style = raw_style if raw_style in self.STYLE_TEMPLATE_MAP else 'modern'
 
         context = {
             'quotation': quotation,
@@ -99,7 +104,6 @@ class QuotationTemplateRenderer:
             'all_quotations': all_quotations or [],
         }
 
-
         return context
 
     def render(self, quotation, template=None, request=None, extra_context=None):
@@ -111,3 +115,4 @@ class QuotationTemplateRenderer:
         template_name = self.STYLE_TEMPLATE_MAP.get(style, self.STYLE_TEMPLATE_MAP['modern'])
 
         return render_to_string(template_name, context, request=request)
+

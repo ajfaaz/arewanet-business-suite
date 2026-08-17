@@ -40,9 +40,18 @@ class QuotationService:
         vat = getattr(quotation, 'vat', 0)
         discount = getattr(quotation, 'discount', 0)
         subtotal, vat_amount, total = cls.calculate_totals(items, vat, discount)
+
+        if not getattr(quotation, 'template_id', None) and getattr(quotation, 'organization', None):
+            from invoices.services.quotation_template_resolver import QuotationTemplateResolver
+            resolved_tpl = QuotationTemplateResolver.resolve(organization=quotation.organization)
+            if resolved_tpl:
+                quotation.template = resolved_tpl
+
         quotation.subtotal = subtotal
         quotation.total = total
         quotation.save()
+
+
 
         for item in items:
             if isinstance(item, dict):

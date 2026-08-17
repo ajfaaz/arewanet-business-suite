@@ -1,105 +1,10 @@
 {% extends "quotations/preview/base.html" %}
+{% load static %}
 
 {% block quotation_content %}
-<style>
-    .modern-doc {
-        color: #1e293b;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        line-height: 1.5;
-    }
-    .modern-header {
-        border-bottom: 3px solid #2563eb;
-        padding-bottom: 24px;
-        margin-bottom: 28px;
-    }
-    .modern-brand-name {
-        font-size: 24px;
-        font-weight: 800;
-        color: #1e293b;
-        letter-spacing: -0.5px;
-    }
-    .modern-doc-title {
-        font-size: 32px;
-        font-weight: 800;
-        color: #2563eb;
-        letter-spacing: -1px;
-        text-transform: uppercase;
-    }
-    .modern-box {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 16px 20px;
-    }
-    .modern-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        margin-bottom: 28px;
-    }
-    .modern-table thead {
-        display: table-header-group;
-    }
-    .modern-table th {
-        background: #1e293b;
-        color: #ffffff;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.75px;
-        padding: 12px 16px;
-        border: none;
-    }
-    .modern-table th:first-child {
-        border-top-left-radius: 6px;
-        border-bottom-left-radius: 6px;
-    }
-    .modern-table th:last-child {
-        border-top-right-radius: 6px;
-        border-bottom-right-radius: 6px;
-    }
-    .modern-table tr {
-        page-break-inside: avoid;
-    }
-    .modern-table td {
-        padding: 14px 16px;
-        border-bottom: 1px solid #e2e8f0;
-        font-size: 14px;
-        color: #334155;
-    }
-    .modern-summary-card {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 20px;
-        page-break-inside: avoid;
-    }
-    .modern-grand-total {
-        font-size: 22px;
-        font-weight: 800;
-        color: #2563eb;
-    }
-    .modern-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-left: 4px solid #2563eb;
-        padding: 16px 20px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-        page-break-inside: avoid;
-    }
-    .modern-signature-block {
-        page-break-inside: avoid;
-        margin-top: 40px;
-        padding-top: 20px;
-    }
-    .modern-footer {
-        border-top: 1px solid #e2e8f0;
-        padding-top: 20px;
-        margin-top: 40px;
-        page-break-inside: avoid;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'quotations/modern.css' %}">
+
+
 
 <div class="modern-doc">
     <!-- Header Section -->

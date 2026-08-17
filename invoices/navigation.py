@@ -143,12 +143,11 @@ MENU_SECTIONS = [
         "title": "System",
         "items": [
             {
-                "label": "Administration",
-                "url_name": "admin:index",
-                "icon": "bi-gear",
-                "permission": "system.admin",
-                "external": True,
-                "url_match": "admin",
+                "label": "Settings & Admin",
+                "url_name": "admin_settings_dashboard",
+                "icon": "bi-gear-fill",
+                "permission": "organization.view",
+                "url_match": "settings",
             },
         ],
     },
@@ -171,11 +170,12 @@ def get_user_menu(membership, current_url_name=None, is_superuser=False):
         permitted_items = []
         for item in sec["items"]:
             # Superusers always see items
-            if is_superuser or item.get("permission") == "system.admin":
+            if is_superuser or item.get("permission") in ["system.admin", "organization.view"]:
                 if is_superuser or has_perm(membership, item.get("permission", "")):
                     permitted_items.append(item)
             elif has_perm(membership, item.get("permission", "")):
                 permitted_items.append(item)
+
 
         if permitted_items:
             sections.append({

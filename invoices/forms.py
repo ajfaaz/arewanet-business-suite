@@ -1,6 +1,12 @@
 from django import forms
-from .models import Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product, Quotation, QuotationItem, QuotationTemplate
+from django.contrib.auth.models import User
+
+from .models import (
+    Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product, Quotation, QuotationItem, QuotationTemplate,
+    Organization, OrganizationMembership, Role, Permission
+)
 from django.forms import inlineformset_factory
+
 
 class InvoiceForm(forms.ModelForm):
 
@@ -126,6 +132,7 @@ class QuotationForm(forms.ModelForm):
         model = Quotation
         fields = [
             'customer',
+            'template',
             'quotation_date',
             'valid_until',
             'status',
@@ -136,18 +143,45 @@ class QuotationForm(forms.ModelForm):
         ]
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-select'}),
+            'template': forms.Select(attrs={'class': 'form-select'}),
             'quotation_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
-        organization = kwargs.pop('organization', None)
+        self.organization = kwargs.pop('organization', None)
         super().__init__(*args, **kwargs)
-        if organization:
-            self.fields['customer'].queryset = Customer.objects.filter(organization=organization)
+        if self.organization:
+            self.fields['customer'].queryset = Customer.objects.filter(organization=self.organization)
+            self.fields['template'].queryset = QuotationTemplate.objects.filter(
+                organization=self.organization,
+                is_active=True
+            )
+            if not self.instance.pk:
+                default_tpl = QuotationTemplate.objects.filter(
+                    organization=self.organization,
+                    is_default=True,
+                    is_active=True
+                ).first()
+                if default_tpl:
+                    self.fields['template'].initial = default_tpl.pk
         else:
             self.fields['customer'].queryset = Customer.objects.all()
+            self.fields['template'].queryset = QuotationTemplate.objects.filter(is_active=True)
+
         self.fields['customer'].empty_label = "Select Customer"
+        self.fields['template'].empty_label = "-- Select Quotation Template --"
+        self.fields['template'].required = False
+
+    def clean_template(self):
+        template = self.cleaned_data.get('template')
+        if template and self.organization:
+            if template.organization_id != self.organization.id:
+                raise forms.ValidationError("Invalid template selection for this organization.")
+            if not template.is_active:
+                raise forms.ValidationError("The selected quotation template is inactive.")
+        return template
+
 
 
 class QuotationItemForm(forms.ModelForm):
@@ -395,4 +429,131 @@ class QuotationTemplateForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class OrganizationSettingsForm(forms.ModelForm):
+
+    CURRENCY_CHOICES = [
+        ('NGN', 'NGN (₦) - Nigerian Naira'),
+        ('USD', 'USD ($) - US Dollar'),
+        ('EUR', 'EUR (€) - Euro'),
+        ('GBP', 'GBP (£) - British Pound'),
+        ('CAD', 'CAD (CA$) - Canadian Dollar'),
+        ('AUD', 'AUD (A$) - Australian Dollar'),
+    ]
+
+    currency = forms.ChoiceField(
+        choices=CURRENCY_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    class Meta:
+        model = Organization
+        fields = [
+            'name',
+            'logo',
+            'signature',
+            'stamp',
+            'phone',
+            'email',
+            'website',
+            'address',
+            'currency',
+            'invoice_prefix',
+            'default_vat',
+            'bank_name',
+            'account_name',
+            'account_number',
+            'terms',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Organization Name'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+234 800 000 0000'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'info@organization.com'}),
+            'website': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.organization.com'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Physical / Billing Address'}),
+            'invoice_prefix': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. ANV'}),
+            'default_vat': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '7.50'}),
+            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. First Bank of Nigeria'}),
+            'account_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account Holder Name'}),
+            'account_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit account number'}),
+            'terms': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Standard quotation & invoice terms'}),
+        }
+
+
+class MemberInviteForm(forms.Form):
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username (e.g. jdoe)'})
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'member@organization.com'})
+    )
+    first_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'})
+    )
+    last_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'})
+    )
+    password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Leave blank for default password'}),
+        help_text='If left blank, a secure default password will be assigned.'
+    )
+    role = forms.ModelChoiceField(
+        queryset=Role.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label='-- Select Role --'
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("A user with this username already exists.")
+        return username
+
+
+class MemberEditForm(forms.ModelForm):
+    role = forms.ModelChoiceField(
+        queryset=Role.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    class Meta:
+        model = OrganizationMembership
+        fields = ['role', 'is_active']
+        widgets = {
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class RoleForm(forms.ModelForm):
+    permissions = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.filter(is_active=True),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False
+    )
+
+    class Meta:
+        model = Role
+        fields = ['name', 'description', 'permissions']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Role Name (e.g. Senior Billing Officer)'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe responsibilities'}),
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name:
+            from django.utils.text import slugify
+            slug = slugify(name)
+            qs = Role.objects.filter(slug=slug)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("A role with this name already exists.")
+        return name
+
 

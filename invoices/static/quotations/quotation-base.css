@@ -1,0 +1,75 @@
+/* Base document wrapper and container styles */
+.preview-toolbar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.a4-wrapper {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+.a4-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 25mm 20mm 20mm 20mm;
+    margin: 0 auto;
+    background: #ffffff;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #1e293b;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Common Page Break rules */
+.item-table {
+    page-break-inside: auto;
+}
+
+.item-row, tr {
+    page-break-inside: avoid;
+}
+
+.totals-section, .signature-section, .bank-section, .terms-section, .notes-section {
+    page-break-inside: avoid;
+}
+
+/* Media Print Rules */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+    body, html {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    .preview-toolbar, .no-print, .navbar, .sidebar, .sidebar-wrapper, nav, header, footer, #sidebar {
+        display: none !important;
+    }
+    .a4-wrapper {
+        padding: 0 !important;
+        background: transparent !important;
+        overflow: visible !important;
+    }
+    .a4-page {
+        position: static !important;
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: #ffffff !important;
+    }
+}

@@ -592,7 +592,15 @@ class Quotation(models.Model):
     )
     notes = models.TextField(blank=True)
     terms = models.TextField(blank=True)
+    template = models.ForeignKey(
+        'QuotationTemplate',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="quotations"
+    )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     def save(self, *args, **kwargs):

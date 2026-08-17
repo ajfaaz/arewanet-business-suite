@@ -1,7 +1,9 @@
 import io
 from decimal import Decimal
 from datetime import date, datetime
+from django.contrib.auth.models import User
 from django.contrib.auth import logout as auth_logout
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -10,8 +12,16 @@ from django.db.models import Sum, Q
 from django.core.mail import EmailMessage
 from django.contrib import messages
 
-from .models import Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog, Payment, Receipt, ProductCategory, Product, OrganizationMembership, QuotationTemplate
-from .forms import InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm, QuotationForm, QuotationItemFormSet, QuotationTemplateForm
+from .models import (
+    Invoice, InvoiceItem, Quotation, Organization, Customer, UserProfile, ActivityLog,
+    Payment, Receipt, ProductCategory, Product, OrganizationMembership, QuotationTemplate, Role, Permission
+)
+from .forms import (
+    InvoiceForm, InvoiceItemFormSet, CustomerForm, PaymentForm, ProductCategoryForm, ProductForm,
+    QuotationForm, QuotationItemFormSet, QuotationTemplateForm, OrganizationSettingsForm, MemberInviteForm,
+    MemberEditForm, RoleForm
+)
+
 from .permissions import require_permission
 from .services.quotation_template_service import QuotationTemplateService
 from .utils.pdf_generator import generate_invoice_pdf
@@ -1412,6 +1422,7 @@ def quotation_template_toggle_active(request, pk):
 @login_required
 @require_permission("quotation_template.delete")
 def quotation_template_delete(request, pk):
+    from django.db.models import ProtectedError
     org = _get_user_organization(request.user)
     template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
 
@@ -1421,8 +1432,15 @@ def quotation_template_delete(request, pk):
 
     if request.method == "POST":
         name = template.name
-        template.delete()
-        messages.success(request, f"Quotation template '{name}' deleted successfully.")
+        try:
+            template.delete()
+            messages.success(request, f"Quotation template '{name}' deleted successfully.")
+        except ProtectedError:
+            messages.error(
+                request,
+                f"Cannot delete template '{name}' because it is referenced by existing quotations. "
+                "You may deactivate it instead to preserve document history."
+            )
         return redirect("quotation_template_list")
 
     return render(
@@ -1437,11 +1455,17 @@ def quotation_template_delete(request, pk):
 @login_required
 def quotation_template_preview(request, pk):
     from .permissions import has_permission
+    from .services.quotation_template_resolver import QuotationTemplateResolver
     if not (has_permission(request.user, "quotation_template.view", request=request) or has_permission(request.user, "quotation.view", request=request)):
         raise PermissionDenied("You do not have permission to view quotation previews.")
 
     org = _get_user_organization(request.user)
-    template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
+    override_template_id = request.GET.get('override_template') or request.GET.get('template_id')
+    template = None
+    if pk and int(pk) > 0:
+        template = get_object_or_404(QuotationTemplate, pk=pk, organization=org)
+
 
     quotation_id = request.GET.get('quotation')
     if quotation_id:
@@ -1449,21 +1473,281 @@ def quotation_template_preview(request, pk):
     else:
         quotation = QuotationTemplateService.get_demo_quotation_data(org)
 
-    all_templates = QuotationTemplate.objects.filter(organization=org, is_active=True)
+    resolved_template = QuotationTemplateResolver.resolve(
+        organization=org,
+        quotation=quotation if isinstance(quotation, Quotation) else None,
+        requested_template=override_template_id or template
+    )
+
+    all_templates = list(QuotationTemplate.objects.filter(organization=org, is_active=True))
+    if resolved_template and resolved_template not in all_templates:
+        all_templates.append(resolved_template)
+
     all_quotations = Quotation.objects.filter(organization=org).order_by('-created_at')[:20]
 
     from .services.template_renderer import QuotationTemplateRenderer
     renderer = QuotationTemplateRenderer(organization=org)
     context = renderer.render_context(
         quotation=quotation,
-        template=template,
+        template=resolved_template,
         all_templates=all_templates,
         all_quotations=all_quotations
     )
 
-    style = template.style if hasattr(template, 'style') else 'modern'
+    style = context.get('style', 'modern')
     template_name = QuotationTemplateRenderer.STYLE_TEMPLATE_MAP.get(style, QuotationTemplateRenderer.STYLE_TEMPLATE_MAP['modern'])
 
     return render(request, template_name, context)
+
+
+
+@login_required
+def admin_settings_dashboard(request):
+    from .permissions import has_permission
+    if not (request.user.is_superuser or has_permission(request.user, "organization.view", request=request) or has_permission(request.user, "organization.edit", request=request)):
+        raise PermissionDenied("You do not have permission to access System Settings & Administration.")
+
+    org = _get_user_organization(request.user)
+    active_tab = request.GET.get('tab', 'overview')
+
+    # Forms
+    org_form = OrganizationSettingsForm(instance=org)
+    invite_form = MemberInviteForm()
+
+    # Data Collections
+    members = OrganizationMembership.objects.filter(organization=org).select_related('user', 'role').order_by('-joined_at')
+    roles = Role.objects.all().prefetch_related('permissions').order_by('name')
+    templates = QuotationTemplate.objects.filter(organization=org).order_by('-is_default', 'name')
+    activity_logs = ActivityLog.objects.all().select_related('user').order_by('-created_at')[:30]
+    permissions_list = Permission.objects.filter(is_active=True).order_by('module', 'name')
+
+    # Group permissions by module
+    permission_modules = {}
+    for p in permissions_list:
+        mod_name = p.module.replace('_', ' ').title()
+        if mod_name not in permission_modules:
+            permission_modules[mod_name] = []
+        permission_modules[mod_name].append(p)
+
+    # Overview KPI Metrics
+    total_members = members.count()
+    active_members = members.filter(is_active=True).count()
+    total_roles = roles.count()
+    active_templates = templates.filter(is_active=True).count()
+    default_template = templates.filter(is_default=True).first()
+    total_invoices_count = Invoice.objects.filter(organization=org).count()
+    total_customers_count = Customer.objects.filter(organization=org).count()
+
+    context = {
+        'organization': org,
+        'active_tab': active_tab,
+        'org_form': org_form,
+        'invite_form': invite_form,
+        'members': members,
+        'roles': roles,
+        'templates': templates,
+        'activity_logs': activity_logs,
+        'permission_modules': permission_modules,
+        'total_members': total_members,
+        'active_members': active_members,
+        'total_roles': total_roles,
+        'active_templates': active_templates,
+        'default_template': default_template,
+        'total_invoices_count': total_invoices_count,
+        'total_customers_count': total_customers_count,
+    }
+
+    return render(request, 'settings/dashboard.html', context)
+
+
+@login_required
+@require_permission("organization.edit")
+def organization_settings_update(request):
+    org = _get_user_organization(request.user)
+
+    if request.method == 'POST':
+        form = OrganizationSettingsForm(request.POST, request.FILES, instance=org)
+        if form.is_valid():
+            form.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Updated organization profile and system settings for '{org.name}'"
+            )
+            messages.success(request, f"Organization profile settings for '{org.name}' updated successfully.")
+            return redirect('/settings/?tab=organization')
+        else:
+            messages.error(request, "Please correct the errors in the organization profile form.")
+
+    return redirect('/settings/?tab=organization')
+
+
+@login_required
+@require_permission("user.create")
+def member_create(request):
+    org = _get_user_organization(request.user)
+
+    if request.method == 'POST':
+        form = MemberInviteForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            email = form.cleaned_data['email']
+            first_name = form.cleaned_data.get('first_name', '')
+            last_name = form.cleaned_data.get('last_name', '')
+            raw_pwd = form.cleaned_data.get('password')
+            role = form.cleaned_data['role']
+
+            password = raw_pwd if raw_pwd else 'ArewaNet@2026'
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+
+            OrganizationMembership.objects.create(
+                organization=org,
+                user=user,
+                role=role,
+                is_active=True
+            )
+
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Added new member '{user.username}' with role '{role.name}' to '{org.name}'"
+            )
+
+            messages.success(request, f"Member '{user.username}' added successfully to {org.name} as {role.name}.")
+            return redirect('/settings/?tab=members')
+        else:
+            messages.error(request, "Failed to add member. Please check form errors.")
+            return render(request, 'settings/member_form.html', {'form': form, 'title': 'Add New Team Member'})
+    else:
+        form = MemberInviteForm()
+
+    return render(request, 'settings/member_form.html', {'form': form, 'title': 'Add New Team Member'})
+
+
+@login_required
+@require_permission("user.edit")
+def member_edit(request, pk):
+    org = _get_user_organization(request.user)
+    membership = get_object_or_404(OrganizationMembership, pk=pk, organization=org)
+
+    if request.method == 'POST':
+        form = MemberEditForm(request.POST, instance=membership)
+        if form.is_valid():
+            m = form.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Updated member '{m.user.username}' role to '{m.role.name}' (Active: {m.is_active})"
+            )
+            messages.success(request, f"Membership for '{m.user.username}' updated successfully.")
+            return redirect('/settings/?tab=members')
+    else:
+        form = MemberEditForm(instance=membership)
+
+    return render(request, 'settings/member_form.html', {
+        'form': form,
+        'membership': membership,
+        'title': f"Edit Member — {membership.user.username}"
+    })
+
+
+@login_required
+@require_permission("user.disable")
+def member_toggle_active(request, pk):
+    org = _get_user_organization(request.user)
+    membership = get_object_or_404(OrganizationMembership, pk=pk, organization=org)
+
+    if membership.user == request.user and membership.is_active:
+        messages.error(request, "You cannot deactivate your own active membership.")
+        return redirect('/settings/?tab=members')
+
+    membership.is_active = not membership.is_active
+    membership.save(update_fields=['is_active', 'updated_at'])
+
+    status_str = "activated" if membership.is_active else "deactivated"
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"Has {status_str} membership for '{membership.user.username}'"
+    )
+
+    messages.success(request, f"Membership for '{membership.user.username}' has been {status_str}.")
+    return redirect('/settings/?tab=members')
+
+
+@login_required
+@require_permission("role.create")
+def role_create(request):
+    if request.method == 'POST':
+        form = RoleForm(request.POST)
+        if form.is_valid():
+            role = form.save(commit=False)
+            from django.utils.text import slugify
+            role.slug = slugify(role.name)
+            role.save()
+            form.save_m2m()
+
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Created custom role '{role.name}'"
+            )
+
+            messages.success(request, f"Custom role '{role.name}' created successfully.")
+            return redirect('/settings/?tab=roles')
+    else:
+        form = RoleForm()
+
+    permissions_list = Permission.objects.filter(is_active=True).order_by('module', 'name')
+    permission_modules = {}
+    for p in permissions_list:
+        mod_name = p.module.replace('_', ' ').title()
+        if mod_name not in permission_modules:
+            permission_modules[mod_name] = []
+        permission_modules[mod_name].append(p)
+
+    return render(request, 'settings/role_form.html', {
+        'form': form,
+        'permission_modules': permission_modules,
+        'title': 'Create Custom Role'
+    })
+
+
+@login_required
+@require_permission("role.edit")
+def role_edit(request, pk):
+    role = get_object_or_404(Role, pk=pk)
+
+    if request.method == 'POST':
+        form = RoleForm(request.POST, instance=role)
+        if form.is_valid():
+            role = form.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Updated role permissions for '{role.name}'"
+            )
+            messages.success(request, f"Role '{role.name}' updated successfully.")
+            return redirect('/settings/?tab=roles')
+    else:
+        form = RoleForm(instance=role)
+
+    permissions_list = Permission.objects.filter(is_active=True).order_by('module', 'name')
+    permission_modules = {}
+    for p in permissions_list:
+        mod_name = p.module.replace('_', ' ').title()
+        if mod_name not in permission_modules:
+            permission_modules[mod_name] = []
+        permission_modules[mod_name].append(p)
+
+    return render(request, 'settings/role_form.html', {
+        'form': form,
+        'role': role,
+        'permission_modules': permission_modules,
+        'title': f"Edit Role — {role.name}"
+    })
+
+
 
 
