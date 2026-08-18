@@ -154,3 +154,64 @@ class StockServiceTestCase(TestCase):
 
         self.assertEqual(movements[2].quantity, Decimal("5.00"))
         self.assertEqual(movements[2].movement_type, MOVEMENT_TYPE_ADJUSTMENT_IN)
+
+    def test_rejects_location_from_different_warehouse(self):
+        other_location = WarehouseLocation.objects.create(
+            warehouse=self.wh_branch,
+            name="Branch Rack",
+            code="BR-RACK-01",
+        )
+
+        with self.assertRaises(ValueError):
+            StockService.receive(
+                product=self.prod_a,
+                warehouse=self.wh_main,
+                location=other_location,
+                quantity=10,
+            )
+
+    def test_adjust_rejects_location_from_different_warehouse(self):
+        other_location = WarehouseLocation.objects.create(
+            warehouse=self.wh_branch,
+            name="Branch Rack",
+            code="BR-RACK-02",
+        )
+
+        with self.assertRaises(ValueError):
+            StockService.adjust(
+                product=self.prod_a,
+                warehouse=self.wh_main,
+                location=other_location,
+                new_quantity=10,
+            )
+
+    def test_transfer_rejects_same_warehouse(self):
+        StockService.receive(
+            product=self.prod_a,
+            warehouse=self.wh_main,
+            quantity=100,
+        )
+
+        with self.assertRaises(ValueError):
+            StockService.transfer(
+                product=self.prod_a,
+                from_warehouse=self.wh_main,
+                to_warehouse=self.wh_main,
+                quantity=10,
+            )
+
+    def test_transfer_rejects_cross_organization_destination(self):
+        StockService.receive(
+            product=self.prod_a,
+            warehouse=self.wh_main,
+            quantity=100,
+        )
+
+        with self.assertRaises(WarehouseOrganizationMismatch):
+            StockService.transfer(
+                product=self.prod_a,
+                from_warehouse=self.wh_main,
+                to_warehouse=self.wh_b,
+                quantity=10,
+            )
+

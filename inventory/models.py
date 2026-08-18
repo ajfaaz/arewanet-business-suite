@@ -130,9 +130,15 @@ class InventoryItem(models.Model):
         ordering = ["product", "warehouse"]
         constraints = [
             models.UniqueConstraint(
+                fields=["product", "warehouse"],
+                condition=models.Q(location__isnull=True),
+                name="unique_product_warehouse_without_location",
+            ),
+            models.UniqueConstraint(
                 fields=["product", "warehouse", "location"],
-                name="unique_product_warehouse_location"
-            )
+                condition=models.Q(location__isnull=False),
+                name="unique_product_warehouse_location",
+            ),
         ]
         indexes = [
             models.Index(fields=["organization", "product"]),

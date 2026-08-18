@@ -18,8 +18,28 @@ from inventory.constants import (
 class StockService(BaseService):
     """
     Central domain service for handling all stock operations.
-    Rule: StockMovement (ledger) is the source of truth, InventoryItem (balance) is the cache.
+
+    StockMovement is the immutable physical-stock ledger.
+    InventoryItem stores the current balance for fast access.
     """
+
+    @staticmethod
+    def _validate_stock_context(product, warehouse, location=None):
+        """
+        Validate that product, warehouse and location belong
+        to the same inventory context.
+        """
+        if product.organization_id != warehouse.organization_id:
+            raise WarehouseOrganizationMismatch(
+                "Product and Warehouse belong to different organizations."
+            )
+
+        if location is not None and location.warehouse_id != warehouse.id:
+            raise ValueError(
+                "Selected location does not belong to the specified warehouse."
+            )
+
+        return warehouse.organization
 
     @classmethod
     @transaction.atomic
@@ -38,13 +58,11 @@ class StockService(BaseService):
         if qty <= 0:
             raise ValueError("Receive quantity must be strictly greater than 0.")
 
-        if warehouse.organization_id != product.organization_id:
-            raise WarehouseOrganizationMismatch("Warehouse and Product belong to different organizations.")
-
-        if location and location.warehouse_id != warehouse.id:
-            raise ValueError("Selected location does not belong to the specified warehouse.")
-
-        org = warehouse.organization
+        org = cls._validate_stock_context(
+            product=product,
+            warehouse=warehouse,
+            location=location,
+        )
 
         # 1. Create StockMovement Ledger Entry
         movement = StockMovement.objects.create(
@@ -95,13 +113,11 @@ class StockService(BaseService):
         if qty <= 0:
             raise ValueError("Issue quantity must be strictly greater than 0.")
 
-        if warehouse.organization_id != product.organization_id:
-            raise WarehouseOrganizationMismatch("Warehouse and Product belong to different organizations.")
-
-        if location and location.warehouse_id != warehouse.id:
-            raise ValueError("Selected location does not belong to the specified warehouse.")
-
-        org = warehouse.organization
+        org = cls._validate_stock_context(
+            product=product,
+            warehouse=warehouse,
+            location=location,
+        )
 
         item = InventoryItem.objects.select_for_update().filter(
             organization=org,
@@ -165,10 +181,11 @@ class StockService(BaseService):
         if target_qty < 0:
             raise ValueError("Stock adjustment new quantity cannot be negative.")
 
-        if warehouse.organization_id != product.organization_id:
-            raise WarehouseOrganizationMismatch("Warehouse and Product belong to different organizations.")
-
-        org = warehouse.organization
+        org = cls._validate_stock_context(
+            product=product,
+            warehouse=warehouse,
+            location=location,
+        )
 
         item = InventoryItem.objects.select_for_update().filter(
             organization=org,
@@ -183,27 +200,20 @@ class StockService(BaseService):
         if delta == 0:
             return None
 
-        if delta > 0:
-            movement_type = MOVEMENT_TYPE_ADJUSTMENT_IN
-            movement_qty = delta
-        else:
-            movement_type = MOVEMENT_TYPE_ADJUSTMENT_OUT
-            movement_qty = delta  # negative
+        movement_type = MOVEMENT_TYPE_ADJUSTMENT_IN if delta > 0 else MOVEMENT_TYPE_ADJUSTMENT_OUT
 
-        # 1. Create StockMovement Ledger Entry
         movement = StockMovement.objects.create(
             organization=org,
             product=product,
             warehouse=warehouse,
             location=location,
-            quantity=movement_qty,
+            quantity=delta,
             movement_type=movement_type,
             reference_type=reference_type,
             reference_id=reference_id,
             notes=notes,
         )
 
-        # 2. Update InventoryItem Balance Cache
         if not item:
             item = InventoryItem.objects.create(
                 organization=org,
@@ -235,12 +245,26 @@ class StockService(BaseService):
         reference_id=None,
         notes="",
     ):
+        cls._validate_stock_context(
+            product=product,
+            warehouse=from_warehouse,
+            location=from_location,
+        )
+
+        cls._validate_stock_context(
+            product=product,
+            warehouse=to_warehouse,
+            location=to_location,
+        )
+
+        if from_warehouse.id == to_warehouse.id:
+            raise ValueError(
+                "Source and destination warehouses must be different."
+            )
+
         qty = Decimal(str(quantity))
         if qty <= 0:
             raise ValueError("Transfer quantity must be strictly greater than 0.")
-
-        if from_warehouse.organization_id != to_warehouse.organization_id:
-            raise WarehouseOrganizationMismatch("Source and Destination warehouses must belong to the same organization.")
 
         out_notes = f"Transfer to {to_warehouse.code}. {notes}".strip()
         in_notes = f"Transfer from {from_warehouse.code}. {notes}".strip()
@@ -271,9 +295,15 @@ class StockService(BaseService):
 
     @classmethod
     def get_balance(cls, product, warehouse=None, location=None):
+        if warehouse:
+            cls._validate_stock_context(
+                product=product,
+                warehouse=warehouse,
+                location=location,
+            )
         qs = InventoryItem.objects.filter(product=product)
         if warehouse:
-            qs = qs.filter(warehouse=warehouse)
+            qs = qs.filter(organization_id=warehouse.organization_id, warehouse=warehouse)
         if location:
             qs = qs.filter(location=location)
 
