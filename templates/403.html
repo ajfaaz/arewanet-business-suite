@@ -1,0 +1,95 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Access Restricted | ArewaNet Business Suite{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8 col-xl-7">
+            <div class="card border-0 shadow-lg overflow-hidden rounded-4">
+                <!-- Header Banner with Premium Styling -->
+                <div class="card-header bg-gradient p-4 text-white text-center position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                    <div class="py-3">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-20 text-danger rounded-circle p-4 mb-3 shadow-sm" style="width: 90px; height: 90px; border: 2px solid rgba(239, 68, 68, 0.3);">
+                            <i class="bi bi-shield-lock-fill display-4"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1 text-white">Access Restricted</h2>
+                        <p class="text-white-50 mb-0 fs-6">HTTP 403 — Unauthorized Action or Resource</p>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5 bg-white">
+                    <!-- Dynamic Exception / Explanation Message -->
+                    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 text-dark rounded-3 p-3 mb-4 d-flex align-items-start gap-3">
+                        <i class="bi bi-exclamation-triangle-fill text-warning fs-4 flex-shrink-0 mt-1"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">Permission Required</h6>
+                            <p class="mb-0 fs-6 text-secondary">
+                                {% if exception_message %}
+                                    {{ exception_message }}
+                                {% elif exception %}
+                                    {{ exception }}
+                                {% else %}
+                                    Your current account role does not have the required permissions to view this resource or perform this action.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- User Role & Context Breakdown -->
+                    {% if user.is_authenticated %}
+                    <div class="p-3 bg-light rounded-3 border mb-4">
+                        <div class="row g-3 text-center text-sm-start">
+                            <div class="col-12 col-sm-4">
+                                <span class="d-block text-muted small text-uppercase fw-semibold">Current User</span>
+                                <span class="fw-bold text-dark fs-6">{{ user.get_full_name|default:user.username }}</span>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <span class="d-block text-muted small text-uppercase fw-semibold">Active Role</span>
+                                {% if current_role %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2 py-1 fs-6 fw-semibold">
+                                        <i class="bi bi-person-badge me-1"></i>{{ current_role.name }}
+                                    </span>
+                                {% elif role %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2 py-1 fs-6 fw-semibold">
+                                        <i class="bi bi-person-badge me-1"></i>{{ role.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary px-2 py-1 fs-6 fw-semibold">Standard Member</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <span class="d-block text-muted small text-uppercase fw-semibold">Organization</span>
+                                <span class="fw-semibold text-dark fs-6">
+                                    <i class="bi bi-building me-1 text-secondary"></i>{{ current_organization.name|default:organization.name|default:"ArewaNet Enterprise" }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Action Guidance & Buttons -->
+                    <div class="d-flex flex-column flex-sm-row align-items-center justify-content-center gap-3 mb-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg px-4 py-2 rounded-3 fw-semibold shadow-sm w-100 w-sm-auto">
+                            <i class="bi bi-speedometer2 me-2"></i>Return to Dashboard
+                        </a>
+                        <button onclick="window.history.back()" class="btn btn-outline-secondary btn-lg px-4 py-2 rounded-3 fw-semibold w-100 w-sm-auto">
+                            <i class="bi bi-arrow-left me-2"></i>Go Back Previous Page
+                        </button>
+                    </div>
+
+                    <!-- Contact & Assistance Callout -->
+                    <div class="text-center pt-3 border-top">
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            If you require access to this feature, please request an elevated role or permission from your 
+                            <strong>Organization Administrator</strong>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

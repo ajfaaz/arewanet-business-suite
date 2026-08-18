@@ -1846,5 +1846,22 @@ def role_edit(request, pk):
     })
 
 
+def custom_permission_denied(request, exception=None):
+    """
+    Renders a professional, user-friendly 403 Access Restricted page
+    when a user attempts to access a page or action not permitted by their role.
+    """
+    message = None
+    if exception:
+        message = str(exception)
+        if message == "PermissionDenied" or not message.strip():
+            message = None
 
+    if not message:
+        message = "Your current account role does not have the required permissions to view this resource or perform this action."
 
+    context = {
+        'exception_message': message,
+        'exception': exception,
+    }
+    return render(request, '403.html', context, status=403)
