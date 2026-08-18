@@ -36,9 +36,14 @@ class QuotationAPIService:
         return DomainQuotationService.reject(quotation, user=user)
 
     @staticmethod
-    def generate_pdf(quotation, response):
-        html_content = render_to_string('invoices/quotation_pdf.html', {'quotation': quotation}) if False else f"<h1>Quotation #{quotation.quotation_no}</h1><p>Customer: {quotation.customer.company_name}</p><p>Total: NGN {quotation.total:,.2f}</p>"
-        res = HttpResponse(html_content, content_type="text/html")
+    def generate_pdf(quotation, response=None, request=None):
+        from core.documents.pdf_service import PDFService
+        pdf_bytes = PDFService.generate_quotation(quotation, request=request)
+        ref_no = getattr(quotation, 'quotation_no', f"QTN-{quotation.id}")
+        filename = f"Quotation-{ref_no}.pdf"
+        
+        res = HttpResponse(pdf_bytes, content_type="application/pdf")
+        res['Content-Disposition'] = f'inline; filename="{filename}"'
         return res
 
     @staticmethod

@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Quotation {{ quotation.quotation_no }}</title>
+    <meta name="author" content="{{ organization.name|default:'ArewaNet' }}">
+    <meta name="subject" content="Quotation {{ quotation.quotation_no }}">
+    <meta name="creator" content="ArewaNet Business Suite">
+    <link rel="stylesheet" href="{% static 'quotations/quotation-base.css' %}">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #1e293b;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .a4-page {
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
+            border: none;
+        }
+        .modern-doc, .classic-doc, .minimal-doc {
+            width: 100%;
+        }
+        thead {
+            display: table-header-group;
+        }
+        tr {
+            page-break-inside: avoid;
+        }
+        .totals-section, .modern-summary-card, .classic-summary-card, .minimal-summary-card, .modern-signature-block, .classic-signature-block, .minimal-signature-block {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+    <div class="a4-page">
+        {% block quotation_content %}{% endblock %}
+    </div>
+</body>
+</html>

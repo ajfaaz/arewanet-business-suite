@@ -102,6 +102,15 @@ class PDFService:
         }
 
     @classmethod
+    def generate_quotation(cls, quotation, response=None, template=None, request=None):
+        from invoices.services.quotation_pdf_service import QuotationPDFService
+        pdf_bytes = QuotationPDFService.generate(quotation, template=template, request=request)
+        if response:
+            response.write(pdf_bytes)
+            return response
+        return pdf_bytes
+
+    @classmethod
     def generate_invoice(cls, invoice, response):
         from invoices.utils.pdf_generator import generate_invoice_pdf
         return generate_invoice_pdf(response, invoice)
@@ -110,6 +119,7 @@ class PDFService:
     def generate_receipt(cls, payment, response):
         from sales.payments.services import PaymentService
         return PaymentService.generate_receipt_pdf(payment, response)
+
 
     @classmethod
     def generate_credit_note(cls, credit_note, response):

@@ -34,9 +34,15 @@
     page-break-inside: auto;
 }
 
+thead {
+    display: table-header-group;
+}
+
 .item-row, tr {
     page-break-inside: avoid;
+    break-inside: avoid;
 }
+
 
 .totals-section, .signature-section, .bank-section, .terms-section, .notes-section {
     page-break-inside: avoid;

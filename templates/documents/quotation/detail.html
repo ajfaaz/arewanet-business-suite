@@ -6,21 +6,32 @@
 {% block doc_type_title %}QUOTATION{% endblock %}
 
 {% block action_buttons %}
+    <a href="{% url 'quotation_template_preview' 0 %}?quotation={{ document.id }}" target="_blank" class="btn btn-sm btn-outline-primary me-1">
+        <i class="fas fa-eye me-1"></i> Preview
+    </a>
     <button onclick="window.print()" class="btn btn-sm btn-outline-primary me-1">
         <i class="fas fa-print me-1"></i> Print
     </button>
     <a href="{% url 'quotation_pdf' document.id %}" target="_blank" class="btn btn-sm btn-outline-secondary me-1">
         <i class="fas fa-file-pdf me-1"></i> Download PDF
     </a>
-    {% if document.status != "SENT" and document.status != "CONVERTED" %}
-    <form action="{% url 'quotation_send' document.id %}" method="POST" style="display:inline;">
+
+    {% if document.status == "DRAFT" %}
+    <a href="{% url 'quotation_update' document.id %}" class="btn btn-sm btn-outline-warning me-1">
+        <i class="fas fa-edit me-1"></i> Edit
+    </a>
+    <form action="{% url 'quotation_issue' document.id %}" method="POST" style="display:inline;">
         {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-outline-info me-1">
-            <i class="fas fa-paper-plane me-1"></i> Send
+        <button type="submit" class="btn btn-sm btn-info me-1" onclick="return confirm('Officially issue and lock this quotation?')">
+            <i class="fas fa-check-circle me-1"></i> Issue
         </button>
     </form>
+    <a href="{% url 'quotation_delete' document.id %}" class="btn btn-sm btn-outline-danger me-1">
+        <i class="fas fa-trash me-1"></i> Delete
+    </a>
     {% endif %}
-    {% if document.status != "CONVERTED" and document.status != "INVOICED" %}
+
+    {% if document.status != "DRAFT" and document.status != "CONVERTED" %}
     <form action="{% url 'quotation_convert_to_invoice' document.id %}" method="POST" style="display:inline;">
         {% csrf_token %}
         <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Convert this quotation to a new invoice?')">

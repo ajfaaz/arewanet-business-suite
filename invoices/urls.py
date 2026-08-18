@@ -180,8 +180,12 @@ urlpatterns = [
     path('quotations/', views.quotation_list, name='quotation_list'),
     path('quotation/create/', views.quotation_create, name='quotation_create'),
     path('quotation/<int:pk>/', views.quotation_detail, name='quotation_detail'),
+    path('quotation/<int:pk>/edit/', views.quotation_update, name='quotation_update'),
+    path('quotation/<int:pk>/issue/', views.quotation_issue, name='quotation_issue'),
     path('quotation/<int:pk>/print/', views.quotation_print, name='quotation_print'),
     path('quotation/<int:pk>/pdf/', views.quotation_pdf, name='quotation_pdf'),
+    path('quotations/<int:pk>/pdf/', views.quotation_pdf),
+
     path('quotation/<int:pk>/send/', views.quotation_send, name='quotation_send'),
     path('quotation/<int:pk>/convert/', views.quotation_convert, name='quotation_convert'),
     path('quotation/<int:pk>/convert-to-invoice/', views.quotation_convert, name='quotation_convert_to_invoice'),

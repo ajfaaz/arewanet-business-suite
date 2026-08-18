@@ -5,6 +5,7 @@ from .models import (
     Invoice, InvoiceItem, Customer, Payment, ProductCategory, Product, Quotation, QuotationItem, QuotationTemplate,
     Organization, OrganizationMembership, Role, Permission
 )
+from core.choices import QuotationStatus
 from django.forms import inlineformset_factory
 
 
@@ -153,10 +154,17 @@ class QuotationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.organization:
             self.fields['customer'].queryset = Customer.objects.filter(organization=self.organization)
-            self.fields['template'].queryset = QuotationTemplate.objects.filter(
+            tpl_qs = QuotationTemplate.objects.filter(
                 organization=self.organization,
                 is_active=True
             )
+            if self.instance.pk and self.instance.template_id:
+                tpl_qs = QuotationTemplate.objects.filter(
+                    organization=self.organization
+                ).filter(
+                    models.Q(is_active=True) | models.Q(pk=self.instance.template_id)
+                )
+            self.fields['template'].queryset = tpl_qs
             if not self.instance.pk:
                 default_tpl = QuotationTemplate.objects.filter(
                     organization=self.organization,
@@ -178,9 +186,16 @@ class QuotationForm(forms.ModelForm):
         if template and self.organization:
             if template.organization_id != self.organization.id:
                 raise forms.ValidationError("Invalid template selection for this organization.")
-            if not template.is_active:
+            is_bound_instance_tpl = bool(self.instance.pk and self.instance.template_id == template.id)
+            if not template.is_active and not is_bound_instance_tpl:
                 raise forms.ValidationError("The selected quotation template is inactive.")
         return template
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.instance.pk and self.instance.status != "DRAFT" and self.instance.status != QuotationStatus.DRAFT:
+            raise forms.ValidationError("Issued quotations cannot be edited.")
+        return cleaned_data
 
 
 

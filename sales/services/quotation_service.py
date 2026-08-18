@@ -81,6 +81,11 @@ class QuotationService:
     @classmethod
     @transaction.atomic
     def update(cls, quotation, items, user=None, deleted_items=None):
+        if quotation.status != QuotationStatus.DRAFT:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(
+                f"Quotation #{quotation.quotation_no} is finalized (status: {quotation.get_status_display()}) and cannot be edited."
+            )
         vat = getattr(quotation, 'vat', 0)
         discount = getattr(quotation, 'discount', 0)
         subtotal, vat_amount, total = cls.calculate_totals(items, vat, discount)
@@ -106,6 +111,12 @@ class QuotationService:
         if user:
             AuditService.log(user, f"Updated Quotation {ref}", reference=ref)
         return quotation
+
+    @classmethod
+    @transaction.atomic
+    def finalize(cls, quotation, user=None, target_status=QuotationStatus.SENT):
+        from invoices.services.quotation_finalization_service import QuotationFinalizationService
+        return QuotationFinalizationService.finalize(quotation, user=user, target_status=target_status)
 
     @classmethod
     @transaction.atomic

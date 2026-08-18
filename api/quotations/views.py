@@ -74,22 +74,47 @@ class QuotationViewSet(OrganizationModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        from core.choices import QuotationStatus
+        if instance.status != QuotationStatus.DRAFT and instance.status != 'DRAFT':
+            return error(message=f"Quotation #{instance.quotation_no} is finalized and cannot be edited.", status_code=status.HTTP_400_BAD_REQUEST)
+        
+        req_status = request.data.get('status')
+        if req_status and req_status.upper() == 'DRAFT' and instance.status != QuotationStatus.DRAFT:
+            return error(message="Status downgrade to DRAFT is not permitted.", status_code=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         if serializer.is_valid():
-            serializer.save()
-            out_serializer = QuotationDetailSerializer(instance)
-            return success(data=out_serializer.data, message="Quotation updated successfully.")
+            try:
+                serializer.save()
+                out_serializer = QuotationDetailSerializer(instance)
+                return success(data=out_serializer.data, message="Quotation updated successfully.")
+            except Exception as e:
+                return error(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
         return error(errors=serializer.errors, message="Validation failed.", status_code=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        from core.choices import QuotationStatus
+        if instance.status != QuotationStatus.DRAFT and instance.status != 'DRAFT':
+            return error(message=f"Quotation #{instance.quotation_no} is finalized and cannot be deleted.", status_code=status.HTTP_400_BAD_REQUEST)
         instance.delete()
         return success(message="Quotation deleted successfully.")
 
     @action(detail=True, methods=["get"])
     def pdf(self, request, pk=None):
         quotation = self.get_object()
-        return QuotationAPIService.generate_pdf(quotation, None)
+        return QuotationAPIService.generate_pdf(quotation, request=request)
+
+    @action(detail=True, methods=["post"])
+    def issue(self, request, pk=None):
+        quotation = self.get_object()
+        try:
+            from invoices.services.quotation_finalization_service import QuotationFinalizationService
+            quotation = QuotationFinalizationService.finalize(quotation, user=request.user)
+            out_serializer = QuotationDetailSerializer(quotation)
+            return success(data=out_serializer.data, message=f"Quotation #{quotation.quotation_no} successfully issued.")
+        except Exception as e:
+            return error(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["post"])
     def convert(self, request, pk=None):

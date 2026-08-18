@@ -1249,40 +1249,132 @@ def quotation_convert(request, pk):
 
 @login_required
 def quotation_pdf(request, pk):
+    from .permissions import has_permission
+    if not (has_permission(request.user, "quotation.view", request=request) or has_permission(request.user, "quotation_template.view", request=request)):
+        raise PermissionDenied("You do not have permission to view quotation PDF documents.")
+
     org = _get_user_organization(request.user)
     quotation = get_object_or_404(Quotation, pk=pk, organization=org)
-    from core.documents.context_builder import DocumentContextBuilder
-    from django.template.loader import render_to_string
-    context = DocumentContextBuilder.build(
-        quotation,
-        title=f"Quotation #{quotation.quotation_no}",
-        extra_context={
-            "customer": quotation.customer,
-            "date": quotation.quotation_date,
-            "valid_until": quotation.valid_until,
-            "doc_type": "QUOTATION",
+
+    override_template_id = request.GET.get('override_template') or request.GET.get('template_id')
+    override_template = None
+    if override_template_id:
+        override_template = QuotationTemplate.objects.filter(pk=override_template_id, organization=org, is_active=True).first()
+
+    try:
+        from core.documents.pdf_service import PDFService
+        from invoices.services.audit_service import AuditService
+
+        pdf_bytes = PDFService.generate_quotation(
+            quotation,
+            template=override_template,
+            request=request
+        )
+
+        ref_no = getattr(quotation, 'quotation_no', f"QTN-{quotation.id}")
+        filename = f"Quotation-{ref_no}.pdf"
+
+        AuditService.log(request.user, f"Generated PDF for Quotation {ref_no}", reference=ref_no)
+
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    except Exception as e:
+        import logging
+        logging.error(f"Error generating quotation PDF for ID {pk}: {str(e)}", exc_info=True)
+        return HttpResponse(
+            "<div style='font-family:sans-serif; padding:40px; text-align:center;'>"
+            "<h2>Document Generation Notice</h2>"
+            "<p>Unable to generate the quotation PDF document. Please try again or contact an administrator.</p>"
+            "</div>",
+            status=500,
+            content_type="text/html"
+        )
+
+
+
+@login_required
+def quotation_update(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+
+    from core.choices import QuotationStatus
+    if quotation.status != 'DRAFT' and quotation.status != QuotationStatus.DRAFT:
+        messages.error(request, f"Quotation {quotation.quotation_no} is finalized and cannot be edited.")
+        return redirect('quotation_detail', pk=quotation.pk)
+
+    if request.method == 'POST':
+        form = QuotationForm(request.POST, instance=quotation, organization=org)
+        formset = QuotationItemFormSet(request.POST, instance=quotation, prefix='items', form_kwargs={'organization': org})
+
+        if form.is_valid() and formset.is_valid():
+            quotation = form.save(commit=False)
+            quotation.organization = org
+            items = formset.save(commit=False)
+
+            from sales.services.quotation_service import QuotationService
+            quotation = QuotationService.update(
+                quotation,
+                items,
+                user=request.user,
+                deleted_items=formset.deleted_objects
+            )
+
+            messages.success(request, f"Quotation {quotation.quotation_no} updated successfully.")
+            return redirect('quotation_detail', pk=quotation.pk)
+        else:
+            messages.error(request, "Unable to save quotation. Please check the highlighted errors below.")
+
+    else:
+        form = QuotationForm(instance=quotation, organization=org)
+        formset = QuotationItemFormSet(instance=quotation, prefix='items', form_kwargs={'organization': org})
+
+    return render(
+        request,
+        'quotations/quotation_form.html',
+        {
+            'form': form,
+            'formset': formset,
+            'quotation': quotation,
+            'is_edit': True
         }
     )
-    html_content = render_to_string("documents/quotation/detail.html", context, request=request)
-    
+
+
+@login_required
+def quotation_issue(request, pk):
+    _check_permission(request.user, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+    org = _get_user_organization(request.user)
+    quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+
+    from invoices.services.quotation_finalization_service import QuotationFinalizationService
     try:
-        from weasyprint import HTML
-        pdf_file = HTML(string=html_content).write_pdf()
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="Quotation_{quotation.quotation_no}.pdf"'
-        return response
-    except Exception:
-        response = HttpResponse(html_content.encode('utf-8'), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="Quotation_{quotation.quotation_no}.pdf"'
-        return response
+        QuotationFinalizationService.finalize(quotation, user=request.user)
+        messages.success(request, f"Quotation {quotation.quotation_no} has been officially issued.")
+    except Exception as e:
+        messages.error(request, f"Failed to issue quotation: {str(e)}")
+
+    return redirect('quotation_detail', pk=quotation.pk)
 
 
 @login_required
 def quotation_send(request, pk):
     org = _get_user_organization(request.user)
     quotation = get_object_or_404(Quotation, pk=pk, organization=org)
-    quotation.status = "SENT"
-    quotation.save(update_fields=["status"])
+
+    from core.choices import QuotationStatus
+    if quotation.status == 'DRAFT' or quotation.status == QuotationStatus.DRAFT:
+        from invoices.services.quotation_finalization_service import QuotationFinalizationService
+        try:
+            QuotationFinalizationService.finalize(quotation, user=request.user, target_status=QuotationStatus.SENT)
+        except Exception as e:
+            messages.error(request, f"Failed to issue quotation: {str(e)}")
+            return redirect('quotation_detail', pk=quotation.pk)
+    else:
+        quotation.status = "SENT"
+        quotation.save(update_fields=["status"])
+
     messages.success(request, f"Quotation {quotation.quotation_no} marked as sent to {quotation.customer.company_name}.")
     return redirect("quotation_detail", pk=quotation.pk)
 
@@ -1292,6 +1384,11 @@ def quotation_delete(request, pk):
     _check_permission(request.user, ['OWNER', 'ADMIN'])
     org = _get_user_organization(request.user)
     quotation = get_object_or_404(Quotation, pk=pk, organization=org)
+
+    from core.choices import QuotationStatus
+    if quotation.status != 'DRAFT' and quotation.status != QuotationStatus.DRAFT:
+        messages.error(request, f"Quotation {quotation.quotation_no} is finalized and cannot be deleted.")
+        return redirect('quotation_detail', pk=quotation.pk)
 
     if request.method == 'POST':
         no = quotation.quotation_no

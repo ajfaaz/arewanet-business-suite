@@ -599,6 +599,17 @@ class Quotation(models.Model):
         blank=True,
         related_name="quotations"
     )
+    issued_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="issued_quotations"
+    )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
