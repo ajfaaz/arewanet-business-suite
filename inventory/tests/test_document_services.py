@@ -17,7 +17,8 @@ from inventory.constants import (
 )
 from inventory.document_services import InventoryDocumentService
 from inventory.services import StockService
-from core.exceptions import InvalidDocumentStatusError, WarehouseOrganizationMismatch
+from core.exceptions import InvalidDocumentStatusError, WarehouseOrganizationMismatch, BusinessRuleError
+from purchases.models import Supplier, PurchaseOrder, PurchaseOrderItem
 
 User = get_user_model()
 
@@ -213,3 +214,139 @@ class InventoryDocumentServicesTestCase(TestCase):
                 items_data=[{"product": self.prod_a1, "quantity": "10.00"}],
                 user=self.user_a
             )
+
+    def test_grn_po_receiving_partial_and_full(self):
+        today = timezone.now().date()
+        supplier = Supplier.objects.create(
+            organization=self.org_a,
+            company_name="Global Tech Supplies",
+            email="sales@globaltech.com"
+        )
+        po = PurchaseOrder.objects.create(
+            organization=self.org_a,
+            supplier=supplier,
+            warehouse=self.wh_a1,
+            order_number="PO-2026-0001",
+            order_date=today,
+            status="APPROVED",
+            created_by=self.user_a
+        )
+        po_item1 = PurchaseOrderItem.objects.create(
+            purchase_order=po,
+            product=self.prod_a1,
+            quantity=Decimal("100.00"),
+            unit_cost=Decimal("350000.00"),
+            total_cost=Decimal("35000000.00")
+        )
+
+        # Partial receipt: receive 40 units out of 100
+        grn1 = InventoryDocumentService.create_grn(
+            organization=self.org_a,
+            warehouse=self.wh_a1,
+            received_date=today,
+            items_data=[{"product": self.prod_a1, "quantity": "40.00", "unit_cost": "350000.00"}],
+            purchase_order=po,
+            user=self.user_a
+        )
+        InventoryDocumentService.approve_grn(grn1, user=self.user_a)
+        InventoryDocumentService.complete_grn(grn1, user=self.user_a)
+
+        po.refresh_from_db()
+        po_item1.refresh_from_db()
+        self.assertEqual(po.status, "PARTIAL_RECEIPT")
+        self.assertEqual(po_item1.received_quantity, Decimal("40.00"))
+        self.assertEqual(StockService.get_balance(self.prod_a1, warehouse=self.wh_a1), Decimal("40.00"))
+
+        # Second receipt: receive remaining 60 units
+        grn2 = InventoryDocumentService.create_grn(
+            organization=self.org_a,
+            warehouse=self.wh_a1,
+            received_date=today,
+            items_data=[{"product": self.prod_a1, "quantity": "60.00", "unit_cost": "350000.00"}],
+            purchase_order=po,
+            user=self.user_a
+        )
+        InventoryDocumentService.approve_grn(grn2, user=self.user_a)
+        InventoryDocumentService.complete_grn(grn2, user=self.user_a)
+
+        po.refresh_from_db()
+        po_item1.refresh_from_db()
+        self.assertEqual(po.status, "RECEIVED")
+        self.assertEqual(po_item1.received_quantity, Decimal("100.00"))
+        self.assertEqual(StockService.get_balance(self.prod_a1, warehouse=self.wh_a1), Decimal("100.00"))
+
+    def test_grn_po_receiving_over_receive_protection(self):
+        today = timezone.now().date()
+        supplier = Supplier.objects.create(
+            organization=self.org_a,
+            company_name="Global Tech Supplies",
+            email="sales@globaltech.com"
+        )
+        po = PurchaseOrder.objects.create(
+            organization=self.org_a,
+            supplier=supplier,
+            warehouse=self.wh_a1,
+            order_number="PO-2026-0002",
+            order_date=today,
+            status="APPROVED",
+            created_by=self.user_a
+        )
+        PurchaseOrderItem.objects.create(
+            purchase_order=po,
+            product=self.prod_a1,
+            quantity=Decimal("10.00"),
+            unit_cost=Decimal("350000.00"),
+            total_cost=Decimal("3500000.00")
+        )
+
+        grn = InventoryDocumentService.create_grn(
+            organization=self.org_a,
+            warehouse=self.wh_a1,
+            received_date=today,
+            items_data=[{"product": self.prod_a1, "quantity": "15.00"}],
+            purchase_order=po,
+            user=self.user_a
+        )
+        InventoryDocumentService.approve_grn(grn, user=self.user_a)
+
+        # Completing GRN with 15 units when PO only ordered 10 must raise BusinessRuleError
+        with self.assertRaises(BusinessRuleError):
+            InventoryDocumentService.complete_grn(grn, user=self.user_a)
+
+    def test_grn_po_receiving_unapproved_po_protection(self):
+        today = timezone.now().date()
+        supplier = Supplier.objects.create(
+            organization=self.org_a,
+            company_name="Global Tech Supplies",
+            email="sales@globaltech.com"
+        )
+        po = PurchaseOrder.objects.create(
+            organization=self.org_a,
+            supplier=supplier,
+            warehouse=self.wh_a1,
+            order_number="PO-2026-0003",
+            order_date=today,
+            status="DRAFT", # Unapproved draft PO
+            created_by=self.user_a
+        )
+        PurchaseOrderItem.objects.create(
+            purchase_order=po,
+            product=self.prod_a1,
+            quantity=Decimal("10.00"),
+            unit_cost=Decimal("350000.00"),
+            total_cost=Decimal("3500000.00")
+        )
+
+        grn = InventoryDocumentService.create_grn(
+            organization=self.org_a,
+            warehouse=self.wh_a1,
+            received_date=today,
+            items_data=[{"product": self.prod_a1, "quantity": "5.00"}],
+            purchase_order=po,
+            user=self.user_a
+        )
+        InventoryDocumentService.approve_grn(grn, user=self.user_a)
+
+        # Completing GRN for DRAFT PO must raise BusinessRuleError
+        with self.assertRaises(BusinessRuleError):
+            InventoryDocumentService.complete_grn(grn, user=self.user_a)
