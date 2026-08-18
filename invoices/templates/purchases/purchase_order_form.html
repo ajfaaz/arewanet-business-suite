@@ -1,0 +1,130 @@
+{% extends 'invoices/base.html' %}
+
+{% block title %}{{ title }} | ArewaNet ABS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white p-4 border-bottom">
+                    <h2 class="h4 fw-bold mb-0 text-dark">
+                        <i class="fas fa-shopping-cart text-primary me-2"></i>{{ title }}
+                    </h2>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" id="poForm">
+                        {% csrf_token %}
+                        <!-- Header Inputs -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Supplier / Vendor <span class="text-danger">*</span></label>
+                                {{ form.supplier }}
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Target Destination Warehouse <span class="text-danger">*</span></label>
+                                {{ form.warehouse }}
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Order Date</label>
+                                {{ form.order_date }}
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Expected Delivery Date</label>
+                                {{ form.expected_date }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Order Notes & Terms</label>
+                                {{ form.notes }}
+                            </div>
+                        </div>
+
+                        <!-- Line Items Table -->
+                        <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">Line Items</h5>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered align-middle" id="itemsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 45%;">Product</th>
+                                        <th style="width: 20%;">Quantity</th>
+                                        <th style="width: 25%;">Unit Cost (₦)</th>
+                                        <th style="width: 10%;" class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="item-row">
+                                        <td>
+                                            <select name="product_id[]" class="form-select product-select" required>
+                                                <option value="">Select Product...</option>
+                                                {% for p in products %}
+                                                <option value="{{ p.id }}" data-cost="{{ p.cost_price|default:0 }}">{{ p.name }} (SKU: {{ p.sku }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="quantity[]" class="form-control qty-input" min="1" step="0.01" value="1.00" required>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="unit_cost[]" class="form-control cost-input" step="0.01" value="0.00" required>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mb-4">
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="addRowBtn">
+                                <i class="bi bi-plus-circle me-1"></i>Add Another Line Item
+                            </button>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-3 pt-3 border-top">
+                            <a href="{% url 'purchase_order_list' %}" class="btn btn-outline-secondary px-4 fw-semibold">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">Save Draft Purchase Order</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const tableBody = document.querySelector("#itemsTable tbody");
+    const addBtn = document.getElementById("addRowBtn");
+
+    addBtn.addEventListener("click", function() {
+        const firstRow = tableBody.querySelector(".item-row");
+        const newRow = firstRow.cloneNode(true);
+        newRow.querySelector(".product-select").value = "";
+        newRow.querySelector(".qty-input").value = "1.00";
+        newRow.querySelector(".cost-input").value = "0.00";
+        tableBody.appendChild(newRow);
+    });
+
+    tableBody.addEventListener("click", function(e) {
+        if (e.target.closest(".remove-row")) {
+            const rows = tableBody.querySelectorAll(".item-row");
+            if (rows.length > 1) {
+                e.target.closest(".item-row").remove();
+            } else {
+                alert("Purchase Order must have at least one line item.");
+            }
+        }
+    });
+
+    tableBody.addEventListener("change", function(e) {
+        if (e.target.classList.contains("product-select")) {
+            const opt = e.target.options[e.target.selectedIndex];
+            const cost = opt.getAttribute("data-cost") || "0.00";
+            const row = e.target.closest(".item-row");
+            row.querySelector(".cost-input").value = parseFloat(cost).toFixed(2);
+        }
+    });
+});
+</script>
+{% endblock %}

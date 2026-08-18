@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 from sales.payments import views as sales_payment_views
 from sales import views as sales_views
+from purchases import views as purchase_views
 
 urlpatterns = [
 
@@ -234,4 +235,18 @@ urlpatterns = [
     path('settings/members/<int:pk>/toggle/', views.member_toggle_active, name='member_toggle_active'),
     path('settings/roles/create/', views.role_create, name='role_create'),
     path('settings/roles/<int:pk>/edit/', views.role_edit, name='role_edit'),
+
+    # Purchasing & Supply Management
+    path('suppliers/', purchase_views.supplier_list, name='supplier_list'),
+    path('suppliers/create/', purchase_views.supplier_create, name='supplier_create'),
+    path('suppliers/<int:pk>/edit/', purchase_views.supplier_edit, name='supplier_edit'),
+    path('suppliers/<int:pk>/delete/', purchase_views.supplier_delete, name='supplier_delete'),
+
+    path('purchases/', purchase_views.purchase_order_list, name='purchase_order_list'),
+    path('purchases/create/', purchase_views.purchase_order_create, name='purchase_order_create'),
+    path('purchases/<int:pk>/', purchase_views.purchase_order_detail, name='purchase_order_detail'),
+    path('purchases/<int:pk>/submit/', purchase_views.purchase_order_submit, name='purchase_order_submit'),
+    path('purchases/<int:pk>/approve/', purchase_views.purchase_order_approve, name='purchase_order_approve'),
+    path('purchases/<int:pk>/cancel/', purchase_views.purchase_order_cancel, name='purchase_order_cancel'),
+    path('purchases/<int:pk>/close/', purchase_views.purchase_order_close, name='purchase_order_close'),
 ]

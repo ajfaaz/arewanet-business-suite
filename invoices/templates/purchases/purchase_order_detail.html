@@ -1,0 +1,165 @@
+{% extends 'invoices/base.html' %}
+
+{% block title %}{{ title }} | ArewaNet ABS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Controls -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'purchase_order_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+                <h1 class="h3 fw-bold text-dark mb-0">Purchase Order: {{ po.order_number }}</h1>
+                {% if po.status == 'DRAFT' %}
+                <span class="badge bg-secondary fs-6 px-3 py-1">Draft</span>
+                {% elif po.status == 'SUBMITTED' %}
+                <span class="badge bg-info bg-opacity-20 text-info border border-info border-opacity-30 fs-6 px-3 py-1">Submitted</span>
+                {% elif po.status == 'APPROVED' %}
+                <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 fs-6 px-3 py-1">Approved</span>
+                {% elif po.status == 'RECEIVED' or po.status == 'CLOSED' %}
+                <span class="badge bg-primary fs-6 px-3 py-1">{{ po.get_status_display }}</span>
+                {% elif po.status == 'CANCELLED' %}
+                <span class="badge bg-danger bg-opacity-20 text-danger fs-6 px-3 py-1">Cancelled</span>
+                {% endif %}
+            </div>
+            <p class="text-muted mb-0 small">Created on {{ po.created_at|date:"M d, Y" }} by {{ po.created_by.get_full_name|default:po.created_by.username|default:"System" }}</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            {% if po.status == 'DRAFT' %}
+            <form method="POST" action="{% url 'purchase_order_submit' po.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info text-white fw-semibold"><i class="bi bi-send me-1"></i>Submit for Approval</button>
+            </form>
+            <form method="POST" action="{% url 'purchase_order_approve' po.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Direct Approve</button>
+            </form>
+            <form method="POST" action="{% url 'purchase_order_cancel' po.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger fw-semibold" onclick="return confirm('Cancel this purchase order?')"><i class="bi bi-x-circle me-1"></i>Cancel</button>
+            </form>
+            {% elif po.status == 'SUBMITTED' %}
+            <form method="POST" action="{% url 'purchase_order_approve' po.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Approve Order</button>
+            </form>
+            <form method="POST" action="{% url 'purchase_order_cancel' po.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger fw-semibold" onclick="return confirm('Cancel this purchase order?')"><i class="bi bi-x-circle me-1"></i>Cancel</button>
+            </form>
+            {% elif po.status == 'APPROVED' %}
+            <form method="POST" action="{% url 'purchase_order_close' po.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-archive me-1"></i>Mark Closed</button>
+            </form>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-outline-secondary fw-semibold"><i class="bi bi-printer me-1"></i>Print</button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Document Details -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <div class="row g-4 border-bottom pb-4 mb-4">
+                        <div class="col-6">
+                            <span class="d-block text-muted small text-uppercase fw-semibold mb-1">Vendor / Supplier</span>
+                            <h5 class="fw-bold text-dark mb-1">{{ po.supplier.company_name }}</h5>
+                            <div class="small text-muted">Code: {{ po.supplier.code }}</div>
+                            {% if po.supplier.email %}<div class="small text-muted"><i class="bi bi-envelope me-1"></i>{{ po.supplier.email }}</div>{% endif %}
+                            {% if po.supplier.phone %}<div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ po.supplier.phone }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-6 text-end">
+                            <span class="d-block text-muted small text-uppercase fw-semibold mb-1">Target Warehouse</span>
+                            <h5 class="fw-bold text-dark mb-1"><i class="fas fa-warehouse me-1 text-primary"></i>{{ po.warehouse.name }}</h5>
+                            <div class="small text-muted">Code: {{ po.warehouse.code }}</div>
+                            {% if po.expected_date %}<div class="small text-dark mt-2 fw-semibold"><i class="bi bi-calendar-event me-1 text-warning"></i>Expected: {{ po.expected_date|date:"Y-m-d" }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <h5 class="fw-bold text-dark mb-3">Order Line Items</h5>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Item & Description</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Cost (₦)</th>
+                                    <th class="text-end">Total Cost (₦)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in po.items.all %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">{{ item.product.name }}</div>
+                                        <div class="text-xs text-muted">SKU: {{ item.product.sku }}</div>
+                                    </td>
+                                    <td class="text-center fw-semibold">{{ item.quantity|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ item.unit_cost|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-dark">₦{{ item.total_cost|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Totals Section -->
+                    <div class="row justify-content-end">
+                        <div class="col-12 col-md-5">
+                            <div class="bg-light p-3 rounded-3 border">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Subtotal:</span>
+                                    <span class="fw-semibold">₦{{ po.subtotal|floatformat:2 }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Tax / VAT:</span>
+                                    <span class="fw-semibold">₦{{ po.tax|floatformat:2 }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between pt-2 border-top fs-5 fw-bold text-dark">
+                                    <span>Total Value:</span>
+                                    <span class="text-primary">₦{{ po.total|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if po.notes %}
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-semibold text-muted mb-1">Notes / Special Instructions:</h6>
+                        <p class="text-secondary small mb-0">{{ po.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Summary -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold text-dark mb-3">Order Status & Log</h5>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Order Date:</span>
+                        <span class="fw-semibold text-dark">{{ po.order_date|date:"Y-m-d" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Organization:</span>
+                        <span class="fw-semibold text-dark">{{ po.organization.name }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Current Status:</span>
+                        <span class="fw-bold text-primary">{{ po.get_status_display }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

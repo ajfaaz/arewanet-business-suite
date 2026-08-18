@@ -76,8 +76,6 @@ MENU_SECTIONS = [
                 "icon": "fas fa-truck",
                 "permission": "supplier.view",
                 "url_match": "supplier",
-                "disabled": True,
-                "soon": True,
             },
             {
                 "label": "Purchase Orders",
@@ -85,8 +83,6 @@ MENU_SECTIONS = [
                 "icon": "fas fa-shopping-cart",
                 "permission": "purchase_order.view",
                 "url_match": "purchase_order",
-                "disabled": True,
-                "soon": True,
             },
         ],
     },
