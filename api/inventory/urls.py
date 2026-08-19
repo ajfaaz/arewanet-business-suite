@@ -18,6 +18,8 @@ from api.inventory.views import (
     ReorderRecommendationsAPIView,
 )
 
+from inventory.api_views import StockLedgerAPIView, StockLedgerSummaryAPIView
+
 router = DefaultRouter()
 router.register(r'warehouses', WarehouseViewSet, basename='api-warehouse')
 router.register(r'locations', WarehouseLocationViewSet, basename='api-warehouse-location')
@@ -31,6 +33,8 @@ router.register(r'alerts', StockAlertViewSet, basename='api-stock-alert')
 router.register(r'', InventoryViewSet, basename='api-inventory')
 
 urlpatterns = [
+    path('ledger/', StockLedgerAPIView.as_view(), name='api-stock-ledger'),
+    path('ledger/summary/', StockLedgerSummaryAPIView.as_view(), name='api-stock-ledger-summary'),
     path('dashboard/', InventoryDashboardAPIView.as_view(), name='api-inventory-dashboard'),
     path('statistics/', InventoryStatisticsAPIView.as_view(), name='api-inventory-statistics'),
     path('movements/recent/', RecentStockMovementsAPIView.as_view(), name='api-inventory-recent-movements'),
