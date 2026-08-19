@@ -110,7 +110,6 @@ MENU_SECTIONS = [
                 "permission": "grn.view",
                 "url_match": "grn",
                 "disabled": True,
-                "soon": True,
             },
             {
                 "label": "Goods Issued (GIN)",
@@ -119,7 +118,6 @@ MENU_SECTIONS = [
                 "permission": "gin.view",
                 "url_match": "gin",
                 "disabled": True,
-                "soon": True,
             },
         ],
     },
