@@ -324,6 +324,13 @@ class GoodsReceivedNoteItem(models.Model):
 
 
 class GoodsIssueNote(BaseInventoryDocument):
+    invoice = models.ForeignKey(
+        "invoices.Invoice",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="goods_issue_notes",
+    )
     warehouse = models.ForeignKey(
         Warehouse,
         on_delete=models.PROTECT,

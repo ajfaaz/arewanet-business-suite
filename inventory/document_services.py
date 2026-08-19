@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from core.exceptions import BusinessRuleError, InsufficientStockError, InvalidDocumentStatusError, WarehouseOrganizationMismatch
 from inventory.models import (
@@ -434,6 +435,69 @@ class GoodsIssueService:
             raise BusinessRuleError(f"User does not have permission: {permission_code}")
 
     @classmethod
+    def get_invoice_fulfillment(cls, invoice):
+        fulfillment = {}
+
+        for invoice_item in invoice.items.select_related("product"):
+            if not invoice_item.product_id or not invoice_item.product.is_stockable:
+                continue
+
+            issued = (
+                GoodsIssueNoteItem.objects
+                .filter(
+                    gin__invoice=invoice,
+                    gin__status=DOC_STATUS_COMPLETED,
+                    product=invoice_item.product,
+                )
+                .aggregate(total=Sum("quantity"))
+                .get("total")
+                or Decimal("0.00")
+            )
+
+            quantity = Decimal(str(invoice_item.qty))
+
+            fulfillment[invoice_item.product_id] = {
+                "product": invoice_item.product,
+                "invoiced": quantity,
+                "issued": issued,
+                "remaining": max(
+                    Decimal("0.00"),
+                    quantity - issued,
+                ),
+            }
+
+        return fulfillment
+
+    @classmethod
+    def validate_against_invoice(cls, gin):
+        if not gin.invoice_id:
+            return True
+
+        invoice = gin.invoice
+        fulfillment = cls.get_invoice_fulfillment(invoice)
+
+        for item in gin.items.select_related("product"):
+            data = fulfillment.get(item.product_id)
+
+            if data is None:
+                raise BusinessRuleError(
+                    f"Product '{item.product.name}' "
+                    "does not exist on the invoice."
+                )
+
+            requested = Decimal(str(item.quantity))
+
+            if requested > data["remaining"]:
+                raise BusinessRuleError(
+                    f"Cannot issue {requested} units of "
+                    f"'{item.product.name}'. "
+                    f"Invoice remaining quantity is "
+                    f"{data['remaining']}."
+                )
+
+        return True
+
+    @classmethod
     def validate(cls, gin):
         errors = []
 
@@ -446,6 +510,13 @@ class GoodsIssueService:
             errors.append(
                 "A warehouse is required."
             )
+
+        if gin.invoice_id:
+            if gin.invoice.organization_id != gin.organization_id:
+                errors.append(
+                    "Invoice and Goods Issue Note must belong "
+                    "to the same organization."
+                )
 
         items = list(
             gin.items.select_related("product")
@@ -462,6 +533,13 @@ class GoodsIssueService:
             if item.quantity <= 0:
                 errors.append(
                     f"Quantity for {item.product.name} must be greater than zero."
+                )
+
+            if not item.product.is_stockable:
+                errors.append(
+                    f"Product '{item.product.name}' "
+                    "is not stockable and cannot be issued "
+                    "through inventory."
                 )
 
             if item.product.organization_id != gin.organization_id:
@@ -489,6 +567,8 @@ class GoodsIssueService:
                 "Goods Issue Note validation failed: "
                 + " ".join(errors)
             )
+
+        cls.validate_against_invoice(gin)
 
         return True
 
@@ -580,6 +660,43 @@ class GoodsIssueService:
             )
 
         return True
+
+    @classmethod
+    @transaction.atomic
+    def create_from_invoice(
+        cls,
+        *,
+        invoice,
+        warehouse,
+        created_by,
+        items,
+        document_number,
+    ):
+        if invoice.organization_id != warehouse.organization_id:
+            raise WarehouseOrganizationMismatch(
+                "Invoice and warehouse must belong to the same organization."
+            )
+
+        gin = GoodsIssueNote.objects.create(
+            organization=invoice.organization,
+            invoice=invoice,
+            warehouse=warehouse,
+            document_number=document_number,
+            issue_date=timezone.localdate(),
+            created_by=created_by,
+            status=DOC_STATUS_DRAFT,
+        )
+
+        for item_data in items:
+            GoodsIssueNoteItem.objects.create(
+                gin=gin,
+                product=item_data["product"],
+                quantity=item_data["quantity"],
+            )
+
+        cls.validate(gin)
+
+        return gin
 
     @classmethod
     @transaction.atomic

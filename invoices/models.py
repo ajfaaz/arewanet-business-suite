@@ -477,6 +477,32 @@ class Invoice(models.Model):
             )
         super().save(*args, **kwargs)
 
+    @property
+    def fulfillment_status(self):
+        from inventory.document_services import GoodsIssueService
+        fulfillment = GoodsIssueService.get_invoice_fulfillment(self)
+
+        if not fulfillment:
+            return "NOT_APPLICABLE"
+
+        total_invoiced = sum(
+            x["invoiced"]
+            for x in fulfillment.values()
+        )
+
+        total_issued = sum(
+            x["issued"]
+            for x in fulfillment.values()
+        )
+
+        if total_issued == 0:
+            return "UNFULFILLED"
+
+        if total_issued < total_invoiced:
+            return "PARTIALLY_FULFILLED"
+
+        return "FULFILLED"
+
     class Meta:
         ordering = ['-invoice_date', '-created_at']
         indexes = [
