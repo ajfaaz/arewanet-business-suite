@@ -528,3 +528,69 @@ class StockAlert(models.Model):
     def __str__(self):
         wh_code = self.warehouse.code if self.warehouse else "Global"
         return f"[{self.alert_type}] {self.product.name} @ {wh_code} (Qty: {self.current_quantity}, Resolved: {self.is_resolved})"
+
+
+class PurchaseReturnDocument(BaseInventoryDocument):
+    purchase_order = models.ForeignKey(
+        "purchases.PurchaseOrder",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="purchase_returns",
+    )
+
+    supplier = models.ForeignKey(
+        "purchases.Supplier",
+        on_delete=models.PROTECT,
+        related_name="purchase_returns",
+    )
+
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="purchase_returns",
+    )
+
+    return_date = models.DateField()
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "document_number"],
+                name="unique_purchase_return_number_per_org",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.document_number} "
+            f"({self.status}) @ {self.warehouse.code}"
+        )
+
+
+class PurchaseReturnDocumentItem(models.Model):
+    purchase_return = models.ForeignKey(
+        PurchaseReturnDocument,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+    )
+
+    quantity = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    reason = models.TextField(blank=True)
+
+    def __str__(self):
+        return (
+            f"{self.purchase_return.document_number}: "
+            f"{self.product.name} x {self.quantity}"
+        )
+
