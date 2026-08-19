@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
-from core.exceptions import InvalidDocumentStatusError, WarehouseOrganizationMismatch
+from core.exceptions import BusinessRuleError, InvalidDocumentStatusError, WarehouseOrganizationMismatch
 from inventory.models import (
     GoodsReceivedNote, GoodsReceivedNoteItem,
     GoodsIssueNote, GoodsIssueNoteItem,
@@ -420,3 +420,188 @@ class InventoryDocumentService:
         adj.status = DOC_STATUS_CANCELLED
         adj.save(update_fields=["status", "updated_at"])
         return adj
+
+
+class GoodsIssueService:
+
+    @classmethod
+    @transaction.atomic
+    def create(
+        cls,
+        *,
+        organization,
+        warehouse,
+        document_number,
+        issue_date,
+        created_by=None,
+        notes="",
+    ):
+        if warehouse.organization_id != organization.id:
+            raise BusinessRuleError(
+                "Warehouse does not belong to this organization."
+            )
+
+        return GoodsIssueNote.objects.create(
+            organization=organization,
+            warehouse=warehouse,
+            document_number=document_number,
+            issue_date=issue_date,
+            created_by=created_by,
+            notes=notes,
+            status=DOC_STATUS_DRAFT,
+        )
+
+    @classmethod
+    @transaction.atomic
+    def add_item(
+        cls,
+        *,
+        gin,
+        product,
+        quantity,
+    ):
+        if gin.status != DOC_STATUS_DRAFT:
+            raise BusinessRuleError(
+                "Items can only be added to a draft Goods Issue Note."
+            )
+
+        if product.organization_id != gin.organization_id:
+            raise BusinessRuleError(
+                "Product does not belong to this organization."
+            )
+
+        if product.organization_id != gin.warehouse.organization_id:
+            raise BusinessRuleError(
+                "Product and warehouse belong to different organizations."
+            )
+
+        if quantity <= 0:
+            raise BusinessRuleError(
+                "Issue quantity must be greater than zero."
+            )
+
+        return GoodsIssueNoteItem.objects.create(
+            gin=gin,
+            product=product,
+            quantity=quantity,
+        )
+
+    @classmethod
+    @transaction.atomic
+    def submit(cls, gin):
+        if gin.status != DOC_STATUS_DRAFT:
+            raise BusinessRuleError(
+                "Only draft Goods Issue Notes can be submitted."
+            )
+
+        if not gin.items.exists():
+            raise BusinessRuleError(
+                "Cannot submit a Goods Issue Note without items."
+            )
+
+        gin.status = DOC_STATUS_PENDING
+        gin.save(update_fields=["status", "updated_at"])
+
+        return gin
+
+    @classmethod
+    @transaction.atomic
+    def approve(cls, gin, approved_by):
+        if gin.status != DOC_STATUS_PENDING:
+            raise BusinessRuleError(
+                "Only pending Goods Issue Notes can be approved."
+            )
+
+        if approved_by is None:
+            raise BusinessRuleError(
+                "An approving user is required."
+            )
+
+        gin.status = DOC_STATUS_APPROVED
+        gin.approved_by = approved_by
+        gin.approved_at = timezone.now()
+
+        gin.save(
+            update_fields=[
+                "status",
+                "approved_by",
+                "approved_at",
+                "updated_at",
+            ]
+        )
+
+        return gin
+
+    @classmethod
+    @transaction.atomic
+    def complete(cls, gin, completed_by):
+        if gin.status != DOC_STATUS_APPROVED:
+            raise BusinessRuleError(
+                "Only approved Goods Issue Notes can be completed."
+            )
+
+        if completed_by is None:
+            raise BusinessRuleError(
+                "A completing user is required."
+            )
+
+        items = list(
+            gin.items.select_related("product")
+        )
+
+        if not items:
+            raise BusinessRuleError(
+                "Cannot complete a Goods Issue Note without items."
+            )
+
+        movements = []
+
+        for item in items:
+            movement = StockService.issue(
+                product=item.product,
+                warehouse=gin.warehouse,
+                quantity=item.quantity,
+                movement_type=MOVEMENT_TYPE_SALE,
+                reference_type="GIN",
+                reference_id=gin.id,
+                notes=f"Goods Issue Note {gin.document_number}",
+            )
+
+            movements.append(movement)
+
+        gin.status = DOC_STATUS_COMPLETED
+        gin.completed_by = completed_by
+        gin.completed_at = timezone.now()
+
+        gin.save(
+            update_fields=[
+                "status",
+                "completed_by",
+                "completed_at",
+                "updated_at",
+            ]
+        )
+
+        return gin, movements
+
+    @classmethod
+    @transaction.atomic
+    def cancel(cls, gin):
+        if gin.status in (
+            DOC_STATUS_COMPLETED,
+            DOC_STATUS_CANCELLED,
+        ):
+            raise BusinessRuleError(
+                "This Goods Issue Note cannot be cancelled."
+            )
+
+        gin.status = DOC_STATUS_CANCELLED
+        gin.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+        return gin
+
