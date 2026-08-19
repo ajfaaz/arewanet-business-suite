@@ -1,8 +1,9 @@
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
-from core.exceptions import BusinessRuleError, InvalidDocumentStatusError, WarehouseOrganizationMismatch
+from core.exceptions import BusinessRuleError, InsufficientStockError, InvalidDocumentStatusError, WarehouseOrganizationMismatch
 from inventory.models import (
+    InventoryItem,
     GoodsReceivedNote, GoodsReceivedNoteItem,
     GoodsIssueNote, GoodsIssueNoteItem,
     StockTransferDocument, StockTransferDocumentItem,
@@ -424,6 +425,162 @@ class InventoryDocumentService:
 
 class GoodsIssueService:
 
+    @staticmethod
+    def _require_permission(user, permission_code):
+        if user is None or not user.is_authenticated:
+            raise BusinessRuleError("Authentication is required.")
+        from invoices.permissions import has_permission
+        if not has_permission(user, permission_code):
+            raise BusinessRuleError(f"User does not have permission: {permission_code}")
+
+    @classmethod
+    def validate(cls, gin):
+        errors = []
+
+        if not gin.organization_id:
+            errors.append(
+                "Goods Issue Note must belong to an organization."
+            )
+
+        if not gin.warehouse_id:
+            errors.append(
+                "A warehouse is required."
+            )
+
+        items = list(
+            gin.items.select_related("product")
+        )
+
+        if not items:
+            errors.append(
+                "Goods Issue Note must contain at least one item."
+            )
+
+        seen_products = set()
+
+        for item in items:
+            if item.quantity <= 0:
+                errors.append(
+                    f"Quantity for {item.product.name} must be greater than zero."
+                )
+
+            if item.product.organization_id != gin.organization_id:
+                errors.append(
+                    f"Product '{item.product.name}' "
+                    "does not belong to the GIN organization."
+                )
+
+            if item.product.organization_id != gin.warehouse.organization_id:
+                errors.append(
+                    f"Product '{item.product.name}' "
+                    "does not belong to the warehouse organization."
+                )
+
+            if item.product_id in seen_products:
+                errors.append(
+                    f"Product '{item.product.name}' "
+                    "appears more than once on this GIN."
+                )
+
+            seen_products.add(item.product_id)
+
+        if errors:
+            raise BusinessRuleError(
+                "Goods Issue Note validation failed: "
+                + " ".join(errors)
+            )
+
+        return True
+
+    @staticmethod
+    def _format_stock_shortage_message(shortages):
+        parts = []
+
+        for shortage in shortages:
+            parts.append(
+                f"{shortage['product']} "
+                f"(required={Decimal(str(shortage['required'])):.2f}, "
+                f"available={Decimal(str(shortage['available'])):.2f}, "
+                f"shortage={Decimal(str(shortage['shortage'])):.2f})"
+            )
+
+        return (
+            "Insufficient stock for: "
+            + "; ".join(parts)
+        )
+
+    @classmethod
+    def check_stock_availability(cls, gin):
+        cls.validate(gin)
+
+        shortages = []
+
+        for item in gin.items.select_related("product"):
+            available = StockService.get_balance(
+                product=item.product,
+                warehouse=gin.warehouse,
+            )
+
+            required = Decimal(str(item.quantity))
+
+            if available < required:
+                shortages.append({
+                    "product_id": item.product_id,
+                    "product": item.product.name,
+                    "required": required,
+                    "available": available,
+                    "shortage": required - available,
+                })
+
+        if shortages:
+            raise InsufficientStockError(
+                cls._format_stock_shortage_message(shortages)
+            )
+
+        return True
+
+    @classmethod
+    def check_stock_availability_locked(cls, gin):
+        cls.validate(gin)
+
+        shortages = []
+
+        for item in gin.items.select_related("product"):
+            inventory_item = (
+                InventoryItem.objects
+                .select_for_update()
+                .filter(
+                    organization=gin.organization,
+                    product=item.product,
+                    warehouse=gin.warehouse,
+                    location=None,
+                )
+                .first()
+            )
+
+            available = (
+                inventory_item.quantity
+                if inventory_item
+                else Decimal("0.00")
+            )
+
+            required = Decimal(str(item.quantity))
+
+            if available < required:
+                shortages.append({
+                    "product": item.product.name,
+                    "required": required,
+                    "available": available,
+                    "shortage": required - available,
+                })
+
+        if shortages:
+            raise InsufficientStockError(
+                cls._format_stock_shortage_message(shortages)
+            )
+
+        return True
+
     @classmethod
     @transaction.atomic
     def create(
@@ -494,13 +651,15 @@ class GoodsIssueService:
                 "Only draft Goods Issue Notes can be submitted."
             )
 
-        if not gin.items.exists():
-            raise BusinessRuleError(
-                "Cannot submit a Goods Issue Note without items."
-            )
+        cls.validate(gin)
 
         gin.status = DOC_STATUS_PENDING
-        gin.save(update_fields=["status", "updated_at"])
+        gin.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
 
         return gin
 
@@ -516,6 +675,15 @@ class GoodsIssueService:
             raise BusinessRuleError(
                 "An approving user is required."
             )
+
+        cls._require_permission(approved_by, "gin.approve")
+
+        if gin.created_by_id and gin.created_by_id == approved_by.id:
+            raise BusinessRuleError(
+                "The user who created this Goods Issue Note cannot approve it."
+            )
+
+        cls.check_stock_availability(gin)
 
         gin.status = DOC_STATUS_APPROVED
         gin.approved_by = approved_by
@@ -545,18 +713,13 @@ class GoodsIssueService:
                 "A completing user is required."
             )
 
-        items = list(
-            gin.items.select_related("product")
-        )
+        cls._require_permission(completed_by, "gin.approve")
 
-        if not items:
-            raise BusinessRuleError(
-                "Cannot complete a Goods Issue Note without items."
-            )
+        cls.check_stock_availability_locked(gin)
 
         movements = []
 
-        for item in items:
+        for item in gin.items.select_related("product"):
             movement = StockService.issue(
                 product=item.product,
                 warehouse=gin.warehouse,
@@ -564,7 +727,10 @@ class GoodsIssueService:
                 movement_type=MOVEMENT_TYPE_SALE,
                 reference_type="GIN",
                 reference_id=gin.id,
-                notes=f"Goods Issue Note {gin.document_number}",
+                notes=(
+                    f"Goods Issue Note "
+                    f"{gin.document_number}"
+                ),
             )
 
             movements.append(movement)
@@ -604,4 +770,5 @@ class GoodsIssueService:
         )
 
         return gin
+
 
