@@ -1182,10 +1182,15 @@ def quotation_create(request):
             items = formset.save(commit=False)
 
             from sales.services.quotation_service import QuotationService
-            quotation = QuotationService.create(quotation, items, user=request.user)
-
-            messages.success(request, f"Quotation {quotation.quotation_no} created successfully.")
-            return redirect('quotation_detail', pk=quotation.pk)
+            try:
+                quotation = QuotationService.create(quotation, items, user=request.user)
+                messages.success(request, f"Quotation {quotation.quotation_no} created successfully.")
+                return redirect('quotation_detail', pk=quotation.pk)
+            except Exception as e:
+                msg = str(e)
+                if hasattr(e, 'messages'):
+                    msg = " ".join(e.messages)
+                messages.error(request, f"Unable to create quotation: {msg}")
         else:
             messages.error(request, "Unable to save quotation. Please check the highlighted errors below.")
 
@@ -1314,15 +1319,21 @@ def quotation_update(request, pk):
             items = formset.save(commit=False)
 
             from sales.services.quotation_service import QuotationService
-            quotation = QuotationService.update(
-                quotation,
-                items,
-                user=request.user,
-                deleted_items=formset.deleted_objects
-            )
-
-            messages.success(request, f"Quotation {quotation.quotation_no} updated successfully.")
-            return redirect('quotation_detail', pk=quotation.pk)
+            try:
+                quotation = QuotationService.update(
+                    quotation,
+                    items,
+                    user=request.user,
+                    deleted_items=formset.deleted_objects
+                )
+                messages.success(request, f"Quotation {quotation.quotation_no} updated successfully.")
+                return redirect('quotation_detail', pk=quotation.pk)
+            except Exception as e:
+                msg = str(e)
+                if hasattr(e, 'messages'):
+                    msg = " ".join(e.messages)
+                messages.error(request, f"Unable to update quotation: {msg}")
+                return redirect('quotation_detail', pk=quotation.pk)
         else:
             messages.error(request, "Unable to save quotation. Please check the highlighted errors below.")
 
